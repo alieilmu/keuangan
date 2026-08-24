@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+
+@theme {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+        Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+    /* Aksen utama aplikasi: emerald. */
+    --color-brand-50: #ecfdf5;
+    --color-brand-100: #d1fae5;
+    --color-brand-200: #a7f3d0;
+    --color-brand-500: #10b981;
+    --color-brand-600: #059669;
+    --color-brand-700: #047857;
+}
+
+html {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    @apply bg-gray-50 text-slate-800 antialiased;
+}
+
+/* Carousel tagihan: scroll horizontal dengan snapping, scrollbar disembunyikan. */
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}

@@ -25,6 +25,28 @@ dan mobile.
 
 ## 2. Menjalankan dengan Docker (VPS Ubuntu)
 
+### Cara tercepat: skrip bootstrap
+
+Pada VPS Ubuntu yang masih bersih, satu perintah ini memasang Docker, meng-clone
+repo, membuat `.env` (password database diacak otomatis), build image, migrasi,
+lalu menyalakan seluruh service:
+
+```bash
+REPO_URL=https://github.com/alieilmu/keuangan.git   bash <(curl -fsSL https://raw.githubusercontent.com/alieilmu/keuangan/main/deploy/bootstrap-vps.sh)
+```
+
+Untuk repo privat, clone dulu secara manual lalu jalankan
+`sudo bash deploy/bootstrap-vps.sh` dari dalam foldernya.
+
+Deploy versi berikutnya cukup:
+
+```bash
+cd /opt/keuangan && sudo bash deploy/update.sh
+```
+
+### Cara manual
+
+
 ```bash
 git clone <repo> keuangan && cd keuangan
 

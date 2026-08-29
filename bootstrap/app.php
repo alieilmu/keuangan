@@ -2,6 +2,7 @@
 
 use App\Console\Commands\CheckBudgetThresholds;
 use App\Console\Commands\GenerateCreditBills;
+use App\Console\Commands\GenerateSavingsBills;
 use App\Console\Commands\RemindDueBills;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         RemindDueBills::class,
         CheckBudgetThresholds::class,
         GenerateCreditBills::class,
+        GenerateSavingsBills::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [

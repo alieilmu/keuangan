@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import Card from '../../Components/Card.vue';
 import EmptyState from '../../Components/EmptyState.vue';
@@ -20,10 +20,15 @@ const editing = ref(null);
 const form = useForm({
     name: '',
     type: 'cash',
+    account_number: '',
     opening_balance: 0,
     color: '#10b981',
     is_active: true,
 });
+
+// Nomor rekening hanya relevan untuk akun digital (bank & e-wallet).
+const NUMBERED_TYPES = ['bank', 'ewallet'];
+const needsAccountNumber = computed(() => NUMBERED_TYPES.includes(form.type));
 
 watch(
     () => showForm.value,
@@ -38,6 +43,7 @@ watch(
             Object.assign(form, {
                 name: editing.value.name,
                 type: editing.value.type,
+                account_number: editing.value.account_number ?? '',
                 opening_balance: editing.value.opening_balance,
                 color: editing.value.color,
                 is_active: editing.value.is_active,
@@ -141,6 +147,19 @@ function destroy(account) {
                 <p class="mt-1 text-xs text-slate-400">
                     {{ account.type_label }} - {{ account.transactions_count }} transaksi
                 </p>
+
+                <p
+                    v-if="account.account_number"
+                    class="mt-1 truncate font-mono text-[11px] tracking-wide text-slate-400"
+                >
+                    No. {{ account.account_number }}
+                </p>
+                <p
+                    v-else-if="account.requires_account_number"
+                    class="mt-1 text-[11px] font-medium text-amber-600"
+                >
+                    Nomor rekening belum diisi
+                </p>
             </article>
         </div>
 
@@ -188,6 +207,23 @@ function destroy(account) {
                         class="w-full rounded-xl border-0 py-2.5 pl-9 pr-3 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                     />
                 </div>
+            </FormField>
+
+            <FormField
+                v-if="needsAccountNumber"
+                label="Nomor rekening"
+                required
+                :error="form.errors.account_number"
+                hint="Wajib untuk akun bank dan e-wallet."
+            >
+                <input
+                    v-model="form.account_number"
+                    type="text"
+                    maxlength="40"
+                    inputmode="numeric"
+                    placeholder="Contoh: 1234567890"
+                    class="w-full rounded-xl border-0 px-3 py-2.5 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
+                />
             </FormField>
 
             <FormField label="Warna" :error="form.errors.color">

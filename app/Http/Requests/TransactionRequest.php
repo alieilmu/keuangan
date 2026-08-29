@@ -24,7 +24,8 @@ class TransactionRequest extends FormRequest
                 'nullable', 'integer',
                 Rule::exists('categories', 'id')->where('user_id', $userId),
             ],
-            'type' => ['required', Rule::in(TransactionType::values())],
+            // Hanya income/expense: kaki transfer dibuat lewat modul Transfer.
+            'type' => ['required', Rule::in(TransactionType::manualValues())],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999.99'],
             'transaction_date' => ['required', 'date', 'before_or_equal:'.now()->addYear()->toDateString()],
             'description' => ['nullable', 'string', 'max:255'],

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'name', 'type', 'opening_balance', 'balance', 'color', 'is_active'])]
+#[Fillable(['user_id', 'name', 'type', 'account_number', 'opening_balance', 'balance', 'color', 'is_active'])]
 class Account extends Model
 {
     /**
@@ -34,5 +34,22 @@ class Account extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * Nomor rekening wajib untuk akun bank & e-wallet, tidak berlaku untuk
+     * akun kas fisik seperti dompet tunai.
+     */
+    public function requiresAccountNumber(): bool
+    {
+        return in_array($this->type, [AccountType::Bank, AccountType::EWallet], true);
+    }
+
+    /** Label singkat untuk pemilih akun: "BCA Utama - 1234567890". */
+    public function displayName(): string
+    {
+        return filled($this->account_number)
+            ? $this->name.' - '.$this->account_number
+            : $this->name;
     }
 }

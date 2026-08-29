@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'account_id', 'category_id', 'type', 'amount', 'transaction_date', 'description'])]
+#[Fillable(['user_id', 'account_id', 'category_id', 'transfer_id', 'type', 'amount', 'transaction_date', 'description'])]
 class Transaction extends Model
 {
     /**
@@ -40,6 +40,18 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /** Terisi bila baris ini adalah salah satu kaki dari sebuah transfer. */
+    /** @return BelongsTo<Transfer, $this> */
+    public function transfer(): BelongsTo
+    {
+        return $this->belongsTo(Transfer::class);
+    }
+
+    public function isTransferLeg(): bool
+    {
+        return $this->transfer_id !== null;
     }
 
     /**

@@ -92,7 +92,9 @@ class TransactionsSheetImport implements SkipsEmptyRows, SkipsOnFailure, ToColle
     {
         return [
             'tanggal' => ['required', 'date'],
-            'tipe' => ['required', 'in:'.implode(',', TransactionType::values())],
+            // Hanya income/expense: kaki transfer tidak boleh masuk lewat import
+            // karena harus selalu berpasangan dengan sisi lawannya.
+            'tipe' => ['required', 'in:'.implode(',', TransactionType::manualValues())],
             'nominal' => ['required', 'numeric', 'gt:0'],
             'akun' => ['required', 'string', function (string $attribute, mixed $value, callable $fail): void {
                 if (! isset($this->accounts[mb_strtolower(trim((string) $value))])) {

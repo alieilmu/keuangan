@@ -2,6 +2,7 @@
 
 use App\Console\Commands\CheckBudgetThresholds;
 use App\Console\Commands\GenerateCreditBills;
+use App\Console\Commands\GenerateSavingsBills;
 use App\Console\Commands\RemindDueBills;
 use Illuminate\Support\Facades\Schedule;
 
@@ -17,6 +18,12 @@ use Illuminate\Support\Facades\Schedule;
 // langsung ikut memperhitungkan tagihan yang baru terbentuk hari itu.
 Schedule::command(GenerateCreditBills::class)
     ->dailyAt('06:50')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Tagihan setoran tabungan terencana.
+Schedule::command(GenerateSavingsBills::class)
+    ->dailyAt('06:55')
     ->withoutOverlapping()
     ->onOneServer();
 

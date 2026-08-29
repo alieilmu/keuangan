@@ -65,6 +65,18 @@ class User extends Authenticatable
         return $this->hasMany(Credit::class);
     }
 
+    /** @return HasMany<Transfer, $this> */
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(Transfer::class);
+    }
+
+    /** @return HasMany<SavingsGoal, $this> */
+    public function savingsGoals(): HasMany
+    {
+        return $this->hasMany(SavingsGoal::class);
+    }
+
     public function initials(): string
     {
         $parts = collect(explode(' ', trim($this->name)))->filter()->take(2);

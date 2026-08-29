@@ -81,6 +81,15 @@ RUN mkdir -p storage/framework/{cache/data,sessions,views} storage/logs bootstra
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R ug+rw storage bootstrap/cache
 
+# nginx.conf menjalankan worker sebagai www-data (seragam dengan PHP-FPM),
+# tetapi paket nginx Alpine memberi /var/lib/nginx ke user "nginx" dengan mode
+# 0750 dan tmp 0700. Worker www-data jadi tidak bisa menembus direktori itu
+# untuk menulis berkas sementara, sehingga setiap unggahan yang melebihi
+# client_body_buffer_size gagal sebelum sampai ke PHP:
+#   [crit] open() "/var/lib/nginx/tmp/client_body/..." failed (13: Permission denied)
+# Berlaku juga untuk fastcgi temp saat respons PHP berukuran besar.
+RUN chown -R www-data:www-data /var/lib/nginx /var/log/nginx
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -27,6 +28,52 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /** @return BelongsTo<Group, $this> */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(Group::class);
+    }
+
+    /**
+     * Id seluruh user yang datanya boleh dilihat & dikelola user ini.
+     *
+     * Bila tergabung dalam sebuah group, cakupannya adalah seluruh anggota
+     * group tersebut (kas bersama). Bila belum punya group, cakupannya hanya
+     * dirinya sendiri -- sehingga user baru tetap terisolasi sampai
+     * dimasukkan ke sebuah group.
+     *
+     * @return array<int, int>
+     */
+    public function visibleUserIds(): array
+    {
+        if ($this->group_id === null) {
+            return [(int) $this->getKey()];
+        }
+
+        return static::query()
+            ->where('group_id', $this->group_id)
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Anggota group selain dirinya sendiri.
+     *
+     * @return array<int, int>
+     */
+    public function partnerUserIds(): array
+    {
+        return array_values(array_diff($this->visibleUserIds(), [(int) $this->getKey()]));
+    }
+
+    /** Apakah baris milik $userId berada dalam cakupan user ini. */
+    public function canReach(?int $userId): bool
+    {
+        return $userId !== null && in_array((int) $userId, $this->visibleUserIds(), true);
     }
 
     /** @return HasMany<Account, $this> */

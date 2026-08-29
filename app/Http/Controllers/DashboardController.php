@@ -6,6 +6,7 @@ use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
 use App\Services\DashboardService;
+use App\Support\MemberScope;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,18 +21,24 @@ class DashboardController extends Controller
         $user = $request->user();
         $period = self::resolvePeriod($request->query('period'));
 
-        $data = $this->dashboard->forUser($user, $period);
+        // Pemilih tampilan kas bersama: Gabungan / Punya Saya / anggota lain.
+        $scope = MemberScope::normalize($request->query('scope'));
+        $scopeIds = MemberScope::resolve($user, $scope);
+
+        $data = $this->dashboard->forUser($user, $period, $scopeIds);
 
         return Inertia::render('Dashboard', array_merge($data, [
             'greeting' => self::greeting(),
+            'scope' => $scope,
+            'scope_options' => MemberScope::options($user),
             // Dipakai modal "Catat Transaksi" langsung dari dashboard.
             'accounts' => Account::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'type', 'balance', 'color']),
             'categories' => Category::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->orderBy('name')
                 ->get(['id', 'name', 'type', 'color']),
             'transaction_types' => collect(TransactionType::cases())

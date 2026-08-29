@@ -13,16 +13,16 @@ class TransactionRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
+        $scopeIds = $this->user()->visibleUserIds();
 
         return [
             'account_id' => [
                 'required', 'integer',
-                Rule::exists('accounts', 'id')->where('user_id', $userId),
+                Rule::exists('accounts', 'id')->whereIn('user_id', $scopeIds),
             ],
             'category_id' => [
                 'nullable', 'integer',
-                Rule::exists('categories', 'id')->where('user_id', $userId),
+                Rule::exists('categories', 'id')->whereIn('user_id', $scopeIds),
             ],
             // Hanya income/expense: kaki transfer dibuat lewat modul Transfer.
             'type' => ['required', Rule::in(TransactionType::manualValues())],

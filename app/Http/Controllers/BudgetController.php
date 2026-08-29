@@ -36,7 +36,7 @@ class BudgetController extends Controller
                 'year' => $period->year,
             ],
             'categories' => Category::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('type', TransactionType::Expense->value)
                 ->orderBy('name')
                 ->get(['id', 'name', 'color']),
@@ -82,14 +82,14 @@ class BudgetController extends Controller
         $previous = $period->subMonth();
 
         $existing = Budget::query()
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $user->visibleUserIds())
             ->where('period_year', $period->year)
             ->where('period_month', $period->month)
             ->pluck('category_id')
             ->all();
 
         $rows = Budget::query()
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $user->visibleUserIds())
             ->where('period_year', $previous->year)
             ->where('period_month', $previous->month)
             ->whereNotIn('category_id', $existing)

@@ -8,6 +8,7 @@ use App\Jobs\EvaluateBudgetThreshold;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Support\MemberScope;
 use App\Models\Transfer;
 use App\Services\BudgetService;
 use App\Services\LedgerService;
@@ -33,7 +34,10 @@ class TransactionController extends Controller
             'category_id' => $request->integer('category_id') ?: null,
             'account_id' => $request->integer('account_id') ?: null,
             'search' => $request->string('search')->trim()->value() ?: null,
+            'scope' => MemberScope::normalize($request->query('scope')),
         ];
+
+        $scopeIds = MemberScope::resolve($user, $filters['scope']);
 
         $period = DashboardController::resolvePeriod($filters['period']);
 
@@ -41,10 +45,11 @@ class TransactionController extends Controller
             ->with([
                 'account:id,name',
                 'category:id,name,color',
+                'user:id,name',
                 'transfer.fromAccount:id,name,account_number',
                 'transfer.toAccount:id,name,account_number',
             ])
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $scopeIds)
             ->inPeriod($period->year, $period->month)
             ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
             ->when($filters['category_id'], fn ($query, $id) => $query->where('category_id', $id))
@@ -56,6 +61,10 @@ class TransactionController extends Controller
             ->withQueryString()
             ->through(fn (Transaction $transaction) => [
                 'id' => $transaction->getKey(),
+                // Pada kas bersama, tiap baris menunjukkan siapa yang mencatat.
+                'owner_id' => (int) $transaction->user_id,
+                'owner' => $transaction->user?->name,
+                'is_mine' => (int) $transaction->user_id === (int) $user->getKey(),
                 'type' => $transaction->type->value,
                 'amount' => (float) $transaction->amount,
                 'transaction_date' => $transaction->transaction_date?->toDateString(),
@@ -82,23 +91,24 @@ class TransactionController extends Controller
                 'label' => $period->translatedFormat('F Y'),
             ],
             'accounts' => Account::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->orderBy('name')
                 ->get(['id', 'name', 'type', 'account_number', 'balance']),
             'categories' => Category::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->orderBy('name')
                 ->get(['id', 'name', 'type', 'color']),
             // Riwayat transfer pada periode yang sama, untuk panel transfer.
             'transfers' => Transfer::query()
                 ->with(['fromAccount:id,name,account_number', 'toAccount:id,name,account_number', 'savingsGoal:id,name'])
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->whereBetween('transfer_date', BudgetService::periodRange($period->year, $period->month))
                 ->orderByDesc('transfer_date')
                 ->orderByDesc('id')
                 ->get()
                 ->map(fn (Transfer $transfer) => TransferService::present($transfer))
                 ->values(),
+            'scope_options' => MemberScope::options($user),
             'transaction_types' => collect(TransactionType::manualCases())
                 ->map(fn (TransactionType $type) => ['value' => $type->value, 'label' => $type->label()])
                 ->values(),

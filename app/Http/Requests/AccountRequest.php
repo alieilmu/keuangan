@@ -13,14 +13,14 @@ class AccountRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
+        $scopeIds = $this->user()->visibleUserIds();
         $accountId = $this->route('account')?->getKey();
 
         return [
             'name' => [
                 'required', 'string', 'max:60',
                 Rule::unique('accounts', 'name')
-                    ->where('user_id', $userId)
+                    ->whereIn('user_id', $scopeIds)
                     ->ignore($accountId),
             ],
             'type' => ['required', Rule::in(AccountType::values())],

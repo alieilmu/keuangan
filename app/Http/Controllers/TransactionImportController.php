@@ -7,6 +7,7 @@ use App\Exports\TransactionsExport;
 use App\Exports\TransactionTemplateExport;
 use App\Imports\TransactionsImport;
 use App\Models\Transaction;
+use App\Support\MemberScope;
 use App\Services\LedgerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,7 +40,11 @@ class TransactionImportController extends Controller
 
         $query = Transaction::query()
             ->with(['account:id,name', 'category:id,name'])
-            ->where('user_id', $request->user()->getKey())
+            // Export mengikuti pemilih tampilan yang sedang aktif di halaman.
+            ->whereIn('user_id', MemberScope::resolve(
+                $request->user(),
+                MemberScope::normalize($request->query('scope'))
+            ))
             ->inPeriod($period->year, $period->month)
             ->when(
                 in_array($request->query('type'), TransactionType::values(), true),

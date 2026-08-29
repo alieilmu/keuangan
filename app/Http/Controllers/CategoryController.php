@@ -15,7 +15,7 @@ class CategoryController extends Controller
     public function index(Request $request): Response
     {
         $categories = Category::query()
-            ->where('user_id', $request->user()->getKey())
+            ->whereIn('user_id', $request->user()->visibleUserIds())
             ->withCount('transactions')
             ->orderBy('type')
             ->orderBy('name')

@@ -15,7 +15,7 @@ class AccountController extends Controller
     public function index(Request $request): Response
     {
         $accounts = Account::query()
-            ->where('user_id', $request->user()->getKey())
+            ->whereIn('user_id', $request->user()->visibleUserIds())
             ->withCount('transactions')
             ->orderBy('name')
             ->get()

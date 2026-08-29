@@ -13,7 +13,7 @@ class CreditRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
+        $scopeIds = $this->user()->visibleUserIds();
 
         return [
             'name' => ['required', 'string', 'max:100'],
@@ -25,12 +25,12 @@ class CreditRequest extends FormRequest
             'due_day' => ['required', 'integer', 'between:1,31'],
             'account_id' => [
                 'nullable', 'integer',
-                Rule::exists('accounts', 'id')->where('user_id', $userId),
+                Rule::exists('accounts', 'id')->whereIn('user_id', $scopeIds),
             ],
             'category_id' => [
                 'nullable', 'integer',
                 Rule::exists('categories', 'id')
-                    ->where('user_id', $userId)
+                    ->whereIn('user_id', $scopeIds)
                     ->where('type', TransactionType::Expense->value),
             ],
             'notes' => ['nullable', 'string', 'max:255'],

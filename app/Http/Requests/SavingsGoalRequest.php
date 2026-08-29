@@ -13,8 +13,8 @@ class SavingsGoalRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
-        $ownedAccount = fn () => Rule::exists('accounts', 'id')->where('user_id', $userId);
+        $scopeIds = $this->user()->visibleUserIds();
+        $ownedAccount = fn () => Rule::exists('accounts', 'id')->whereIn('user_id', $scopeIds);
 
         return [
             'name' => ['required', 'string', 'max:100'],

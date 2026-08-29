@@ -23,7 +23,7 @@ class SavingsGoalController extends Controller
 
         $goals = SavingsGoal::query()
             ->with(['sourceAccount:id,name,account_number', 'storageAccount:id,name,account_number'])
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $user->visibleUserIds())
             ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
             ->orderBy('name')
             ->get()
@@ -40,7 +40,7 @@ class SavingsGoalController extends Controller
                 'target_total' => round((float) $active->sum('target_amount'), 2),
             ],
             'accounts' => Account::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'type', 'account_number', 'balance']),
@@ -56,7 +56,7 @@ class SavingsGoalController extends Controller
             'history' => $this->savings->history($goal),
             'can_bill_next_early' => $this->canBillNextEarly($goal),
             'accounts' => Account::query()
-                ->where('user_id', $request->user()->getKey())
+                ->whereIn('user_id', $request->user()->visibleUserIds())
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'account_number', 'balance']),

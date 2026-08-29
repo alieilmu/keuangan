@@ -12,9 +12,9 @@ class TransferRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
+        $scopeIds = $this->user()->visibleUserIds();
 
-        $ownedAccount = fn () => Rule::exists('accounts', 'id')->where('user_id', $userId);
+        $ownedAccount = fn () => Rule::exists('accounts', 'id')->whereIn('user_id', $scopeIds);
 
         return [
             'from_account_id' => ['required', 'integer', $ownedAccount()],

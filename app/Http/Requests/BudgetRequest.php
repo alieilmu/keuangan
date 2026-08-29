@@ -13,7 +13,7 @@ class BudgetRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
+        $scopeIds = $this->user()->visibleUserIds();
         $budgetId = $this->route('budget')?->getKey();
 
         return [
@@ -21,12 +21,12 @@ class BudgetRequest extends FormRequest
                 'required', 'integer',
                 // Anggaran hanya masuk akal untuk kategori pengeluaran.
                 Rule::exists('categories', 'id')
-                    ->where('user_id', $userId)
+                    ->whereIn('user_id', $scopeIds)
                     ->where('type', TransactionType::Expense->value),
                 // Satu kategori hanya boleh punya satu plafon per periode.
                 Rule::unique('budgets', 'category_id')
                     ->where(fn ($query) => $query
-                        ->where('user_id', $userId)
+                        ->whereIn('user_id', $scopeIds)
                         ->where('period_month', $this->integer('period_month'))
                         ->where('period_year', $this->integer('period_year')))
                     ->ignore($budgetId),

@@ -6,8 +6,13 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Semua entitas keuangan memakai aturan yang sama: hanya pemilik baris
- * (kolom user_id) yang boleh melihat dan mengubahnya.
+ * Semua entitas keuangan memakai aturan yang sama: baris boleh dilihat dan
+ * diubah oleh siapa pun yang berada dalam satu group (kas bersama) dengan
+ * pemilik baris.
+ *
+ * Kolom user_id tetap menyimpan siapa yang menginput, jadi riwayat per orang
+ * tidak hilang; yang dilebarkan hanya cakupan aksesnya. User tanpa group
+ * hanya bisa menjangkau datanya sendiri.
  */
 trait OwnedByUser
 {
@@ -38,6 +43,8 @@ trait OwnedByUser
 
     protected function owns(User $user, Model $model): bool
     {
-        return (int) $model->getAttribute('user_id') === (int) $user->getKey();
+        $ownerId = $model->getAttribute('user_id');
+
+        return $user->canReach($ownerId === null ? null : (int) $ownerId);
     }
 }

@@ -11,6 +11,7 @@ import CreditProgress from '../Components/CreditProgress.vue';
 import TransactionFormModal from '../Components/TransactionFormModal.vue';
 import PayBillModal from '../Components/PayBillModal.vue';
 import PeriodSwitcher from '../Components/PeriodSwitcher.vue';
+import ScopeSwitcher from '../Components/ScopeSwitcher.vue';
 import { formatRupiah } from '../lib/format';
 
 const props = defineProps({
@@ -24,6 +25,8 @@ const props = defineProps({
     recent_transactions: Array,
     accounts: Array,
     categories: Array,
+    scope: { type: String, default: 'all' },
+    scope_options: { type: Array, default: () => [] },
 });
 
 const showTransactionModal = ref(false);
@@ -48,6 +51,7 @@ const attention = computed(() =>
             </div>
 
             <div class="flex items-center gap-2">
+                <ScopeSwitcher :scope="scope" :options="scope_options" />
                 <PeriodSwitcher :period="period.iso" />
                 <button
                     type="button"

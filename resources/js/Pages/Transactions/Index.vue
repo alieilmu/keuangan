@@ -6,6 +6,7 @@ import EmptyState from '../../Components/EmptyState.vue';
 import Modal from '../../Components/Modal.vue';
 import TransferModal from '../../Components/TransferModal.vue';
 import PeriodSwitcher from '../../Components/PeriodSwitcher.vue';
+import ScopeSwitcher from '../../Components/ScopeSwitcher.vue';
 import TransactionFormModal from '../../Components/TransactionFormModal.vue';
 import { formatDate, formatRupiah } from '../../lib/format';
 
@@ -16,6 +17,7 @@ const props = defineProps({
     accounts: Array,
     categories: Array,
     transfers: Array,
+    scope_options: { type: Array, default: () => [] },
 });
 
 const showForm = ref(false);
@@ -40,7 +42,7 @@ watch(
         debounce = window.setTimeout(() => {
             router.get(
                 '/transactions',
-                { period: props.period.iso, ...cleaned(value) },
+                { period: props.period.iso, scope: props.filters.scope, ...cleaned(value) },
                 { preserveState: true, preserveScroll: true, replace: true },
             );
         }, 300);
@@ -53,7 +55,9 @@ function cleaned(value) {
 }
 
 const exportUrl = computed(() => {
-    const query = new URLSearchParams(cleaned({ period: props.period.iso, type: filters.type }));
+    const query = new URLSearchParams(
+        cleaned({ period: props.period.iso, scope: props.filters.scope, type: filters.type }),
+    );
 
     return `/transactions/export?${query.toString()}`;
 });
@@ -124,6 +128,7 @@ function submitImport() {
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
+                <ScopeSwitcher :scope="props.filters.scope" :options="scope_options" />
                 <PeriodSwitcher :period="period.iso" />
 
                 <a

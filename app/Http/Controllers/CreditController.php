@@ -25,7 +25,7 @@ class CreditController extends Controller
 
         $credits = Credit::query()
             ->with(['account:id,name', 'category:id,name,color'])
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $user->visibleUserIds())
             ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
             ->orderBy('end_date')
             ->get()
@@ -43,12 +43,12 @@ class CreditController extends Controller
                 'outstanding_total' => round((float) $active->sum('outstanding'), 2),
             ],
             'accounts' => Account::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'categories' => Category::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('type', TransactionType::Expense->value)
                 ->orderBy('name')
                 ->get(['id', 'name', 'color']),
@@ -70,12 +70,12 @@ class CreditController extends Controller
             'schedule' => $this->credits->schedule($credit),
             'can_bill_next_early' => $this->credits->canBillNextEarly($credit),
             'accounts' => Account::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'balance']),
             'categories' => Category::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('type', TransactionType::Expense->value)
                 ->orderBy('name')
                 ->get(['id', 'name', 'color']),

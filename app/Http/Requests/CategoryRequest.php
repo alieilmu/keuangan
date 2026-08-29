@@ -13,14 +13,14 @@ class CategoryRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
+        $scopeIds = $this->user()->visibleUserIds();
         $categoryId = $this->route('category')?->getKey();
 
         return [
             'name' => [
                 'required', 'string', 'max:60',
                 Rule::unique('categories', 'name')
-                    ->where(fn ($query) => $query->where('user_id', $userId)->where('type', $this->input('type')))
+                    ->where(fn ($query) => $query->whereIn('user_id', $scopeIds)->where('type', $this->input('type')))
                     ->ignore($categoryId),
             ],
             'type' => ['required', Rule::in(TransactionType::values())],

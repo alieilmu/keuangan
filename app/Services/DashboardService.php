@@ -23,8 +23,14 @@ class DashboardService
      *
      * @return array<string, mixed>
      */
-    public function forUser(User $user, CarbonImmutable $period): array
+    /**
+     * @param  array<int, int>|null  $scopeIds  Batasi ke user tertentu dalam group
+     *                                          (pemilih tampilan). Null = seluruh group.
+     */
+    public function forUser(User $user, CarbonImmutable $period, ?array $scopeIds = null): array
     {
+        $scopeIds ??= $user->visibleUserIds();
+
         $year = $period->year;
         $month = $period->month;
 
@@ -35,12 +41,12 @@ class DashboardService
                 'label' => $period->translatedFormat('F Y'),
                 'iso' => $period->format('Y-m'),
             ],
-            'summary' => $this->cashflowSummary($user, $year, $month),
-            'expense_breakdown' => $this->expenseByCategory($user, $year, $month),
-            'upcoming_bills' => $this->upcomingBills($user),
+            'summary' => $this->cashflowSummary($user, $year, $month, $scopeIds),
+            'expense_breakdown' => $this->expenseByCategory($user, $year, $month, $scopeIds),
+            'upcoming_bills' => $this->upcomingBills($user, 10, $scopeIds),
             'budgets' => $this->budgets->summary($user, $year, $month)->values(),
-            'credits' => $this->activeCredits($user),
-            'recent_transactions' => $this->recentTransactions($user),
+            'credits' => $this->activeCredits($user, 6, $scopeIds),
+            'recent_transactions' => $this->recentTransactions($user, 6, $scopeIds),
         ];
     }
 
@@ -50,12 +56,13 @@ class DashboardService
      *
      * @return array<string, float>
      */
-    public function cashflowSummary(User $user, int $year, int $month): array
+    public function cashflowSummary(User $user, int $year, int $month, ?array $scopeIds = null): array
     {
+        $scopeIds ??= $user->visibleUserIds();
         [$start, $end] = BudgetService::periodRange($year, $month);
 
         $flow = Transaction::query()
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $scopeIds)
             ->whereBetween('transaction_date', [$start, $end])
             ->selectRaw("COALESCE(SUM(CASE WHEN type = 'income' THEN amount END), 0) as income")
             ->selectRaw("COALESCE(SUM(CASE WHEN type = 'expense' THEN amount END), 0) as expense")
@@ -65,7 +72,7 @@ class DashboardService
         $expense = (float) ($flow?->getAttribute('expense') ?? 0);
 
         $totalBalance = (float) Account::query()
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $scopeIds)
             ->where('is_active', true)
             ->sum('balance');
 
@@ -82,13 +89,14 @@ class DashboardService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function expenseByCategory(User $user, int $year, int $month): Collection
+    public function expenseByCategory(User $user, int $year, int $month, ?array $scopeIds = null): Collection
     {
+        $scopeIds ??= $user->visibleUserIds();
         [$start, $end] = BudgetService::periodRange($year, $month);
 
         $rows = Transaction::query()
             ->leftJoin('categories', 'categories.id', '=', 'transactions.category_id')
-            ->where('transactions.user_id', $user->getKey())
+            ->whereIn('transactions.user_id', $scopeIds)
             ->where('transactions.type', TransactionType::Expense->value)
             ->whereBetween('transactions.transaction_date', [$start, $end])
             ->groupBy('transactions.category_id', 'categories.name', 'categories.color')
@@ -118,13 +126,14 @@ class DashboardService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function upcomingBills(User $user, int $limit = 10): Collection
+    public function upcomingBills(User $user, int $limit = 10, ?array $scopeIds = null): Collection
     {
+        $scopeIds ??= $user->visibleUserIds();
         $today = CarbonImmutable::today();
 
         return Bill::query()
             ->with(['account:id,name', 'category:id,name,color'])
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $scopeIds)
             ->where('status', BillStatus::Unpaid->value)
             ->orderBy('due_date')
             ->limit($limit)
@@ -156,10 +165,11 @@ class DashboardService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function activeCredits(User $user, int $limit = 6): Collection
+    public function activeCredits(User $user, int $limit = 6, ?array $scopeIds = null): Collection
     {
+        $scopeIds ??= $user->visibleUserIds();
         return Credit::query()
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $scopeIds)
             ->where('status', CreditStatus::Active->value)
             ->orderBy('end_date')
             ->limit($limit)
@@ -171,11 +181,12 @@ class DashboardService
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function recentTransactions(User $user, int $limit = 6): Collection
+    public function recentTransactions(User $user, int $limit = 6, ?array $scopeIds = null): Collection
     {
+        $scopeIds ??= $user->visibleUserIds();
         return Transaction::query()
             ->with(['account:id,name', 'category:id,name,color'])
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $scopeIds)
             ->orderByDesc('transaction_date')
             ->orderByDesc('id')
             ->limit($limit)

@@ -44,7 +44,7 @@ class BillController extends Controller
 
         $bills = Bill::query()
             ->with(['account:id,name', 'category:id,name,color', 'credit:id,name,tenor_months', 'savingsGoal:id,name,storage_account_id', 'documents'])
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $user->visibleUserIds())
             ->when($status, fn ($query, $value) => $query->where('status', $value))
             ->orderByRaw("CASE WHEN status = 'unpaid' THEN 0 ELSE 1 END")
             ->orderBy('due_date')
@@ -93,12 +93,12 @@ class BillController extends Controller
                 'overdue_count' => $bills->where('status', 'unpaid')->where('days_left', '<', 0)->count(),
             ],
             'accounts' => Account::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'account_number', 'balance']),
             'categories' => Category::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->where('type', TransactionType::Expense->value)
                 ->orderBy('name')
                 ->get(['id', 'name', 'color']),
@@ -168,17 +168,17 @@ class BillController extends Controller
             return back()->with('error', 'Tagihan ini sudah lunas.');
         }
 
-        $userId = $request->user()->getKey();
+        $scopeIds = $request->user()->visibleUserIds();
 
         $validated = $request->validate([
             'account_id' => [
                 'required', 'integer',
-                Rule::exists('accounts', 'id')->where('user_id', $userId),
+                Rule::exists('accounts', 'id')->whereIn('user_id', $scopeIds),
             ],
             'category_id' => [
                 'nullable', 'integer',
                 Rule::exists('categories', 'id')
-                    ->where('user_id', $userId)
+                    ->whereIn('user_id', $scopeIds)
                     ->where('type', TransactionType::Expense->value),
             ],
             'paid_on' => ['nullable', 'date'],

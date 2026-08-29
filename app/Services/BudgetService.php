@@ -28,7 +28,7 @@ class BudgetService
 
         $spent = Transaction::query()
             ->select('category_id', DB::raw('SUM(amount) as total'))
-            ->where('user_id', $user->getKey())
+            ->whereIn('user_id', $user->visibleUserIds())
             ->where('type', TransactionType::Expense->value)
             ->whereBetween('transaction_date', [$start, $end])
             ->whereNotNull('category_id')
@@ -37,7 +37,7 @@ class BudgetService
         return Budget::query()
             ->join('categories', 'categories.id', '=', 'budgets.category_id')
             ->leftJoinSub($spent, 'spent', 'spent.category_id', '=', 'budgets.category_id')
-            ->where('budgets.user_id', $user->getKey())
+            ->whereIn('budgets.user_id', $user->visibleUserIds())
             ->where('budgets.period_year', $year)
             ->where('budgets.period_month', $month)
             // * 1.0 memaksa pembagian float (SQLite melakukan integer division tanpa ini).
@@ -94,8 +94,12 @@ class BudgetService
     {
         [$start, $end] = self::periodRange($budget->period_year, $budget->period_month);
 
+        // Anggaran bersifat milik group, jadi pemakaiannya dihitung dari
+        // transaksi seluruh anggota group pemilik anggaran ini.
+        $scopeIds = $budget->user?->visibleUserIds() ?? [(int) $budget->user_id];
+
         return (float) Transaction::query()
-            ->where('user_id', $budget->user_id)
+            ->whereIn('user_id', $scopeIds)
             ->where('category_id', $budget->category_id)
             ->where('type', TransactionType::Expense->value)
             ->whereBetween('transaction_date', [$start, $end])

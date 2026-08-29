@@ -99,12 +99,12 @@ class LedgerService
                 ->select('account_id', DB::raw(
                     "SUM(CASE WHEN type IN ('income', 'transfer_in') THEN amount ELSE -amount END) as net"
                 ))
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->groupBy('account_id')
                 ->pluck('net', 'account_id');
 
             Account::query()
-                ->where('user_id', $user->getKey())
+                ->whereIn('user_id', $user->visibleUserIds())
                 ->lockForUpdate()
                 ->get()
                 ->each(function (Account $account) use ($totals): void {

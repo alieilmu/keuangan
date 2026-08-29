@@ -23,12 +23,16 @@ FROM composer:2 AS vendor
 WORKDIR /app
 
 COPY composer.json composer.lock ./
+# ext-gd tidak tersedia pada image composer:2, tetapi stage runtime di bawah
+# memasangnya (docker-php-ext-install ... gd). Requirement platform-nya
+# dilewati di sini saja agar resolusi dependensi tidak gagal.
 RUN composer install \
     --no-dev \
     --no-scripts \
     --no-interaction \
     --prefer-dist \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --ignore-platform-req=ext-gd
 
 COPY . .
 RUN composer dump-autoload --no-dev --optimize --classmap-authoritative

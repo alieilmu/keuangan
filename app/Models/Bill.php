@@ -11,8 +11,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
     'user_id', 'account_id', 'category_id', 'transaction_id', 'credit_id',
-    'installment_number', 'title', 'amount', 'due_date', 'status', 'paid_at',
-    'notes', 'remind_days_before', 'reminded_on',
+    'installment_number', 'savings_goal_id', 'contribution_number', 'transfer_id', 'title',
+    'amount', 'due_date', 'status', 'paid_at', 'notes', 'remind_days_before',
+    'reminded_on',
 ])]
 class Bill extends Model
 {
@@ -29,6 +30,7 @@ class Bill extends Model
             'reminded_on' => 'date',
             'remind_days_before' => 'integer',
             'installment_number' => 'integer',
+            'contribution_number' => 'integer',
         ];
     }
 
@@ -64,6 +66,22 @@ class Bill extends Model
     public function credit(): BelongsTo
     {
         return $this->belongsTo(Credit::class);
+    }
+
+    /** @return BelongsTo<Transfer, $this> */
+    public function transfer(): BelongsTo
+    {
+        return $this->belongsTo(Transfer::class);
+    }
+
+    /**
+     * Terisi bila tagihan ini adalah setoran tabungan terencana.
+     *
+     * @return BelongsTo<SavingsGoal, $this>
+     */
+    public function savingsGoal(): BelongsTo
+    {
+        return $this->belongsTo(SavingsGoal::class);
     }
 
     /** @return MorphMany<Document, $this> */

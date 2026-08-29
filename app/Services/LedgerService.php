@@ -93,9 +93,11 @@ class LedgerService
     public function recalculate(User $user): void
     {
         DB::transaction(function () use ($user): void {
+            // Tanda mengikuti TransactionType::sign(): pemasukan & transfer masuk
+            // menambah saldo, pengeluaran & transfer keluar menguranginya.
             $totals = Transaction::query()
                 ->select('account_id', DB::raw(
-                    "SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END) as net"
+                    "SUM(CASE WHEN type IN ('income', 'transfer_in') THEN amount ELSE -amount END) as net"
                 ))
                 ->where('user_id', $user->getKey())
                 ->groupBy('account_id')

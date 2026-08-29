@@ -13,6 +13,8 @@ use App\Models\Category;
 use App\Services\CreditService;
 use App\Services\DocumentService;
 use App\Services\LedgerService;
+use App\Services\SavingsService;
+use App\Services\TransferService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +29,8 @@ class BillController extends Controller
         private readonly LedgerService $ledger,
         private readonly CreditService $credits,
         private readonly DocumentService $documents,
+        private readonly TransferService $transfers,
+        private readonly SavingsService $savings,
     ) {}
 
     public function index(Request $request): Response
@@ -39,7 +43,7 @@ class BillController extends Controller
         $today = CarbonImmutable::today();
 
         $bills = Bill::query()
-            ->with(['account:id,name', 'category:id,name,color', 'credit:id,name,tenor_months', 'documents'])
+            ->with(['account:id,name', 'category:id,name,color', 'credit:id,name,tenor_months', 'savingsGoal:id,name,storage_account_id', 'documents'])
             ->where('user_id', $user->getKey())
             ->when($status, fn ($query, $value) => $query->where('status', $value))
             ->orderByRaw("CASE WHEN status = 'unpaid' THEN 0 ELSE 1 END")
@@ -70,6 +74,11 @@ class BillController extends Controller
                     'installment_label' => $bill->credit
                         ? 'Cicilan '.$bill->installment_number.'/'.$bill->credit->tenor_months
                         : null,
+                    'savings_goal_id' => $bill->savings_goal_id,
+                    'savings_goal' => $bill->savingsGoal?->name,
+                    'contribution_label' => $bill->savingsGoal
+                        ? 'Setoran tabungan #'.$bill->contribution_number
+                        : null,
                     'invoice_document' => DocumentService::present($bill->invoiceDocument()),
                     'receipt_document' => DocumentService::present($bill->receiptDocument()),
                 ];
@@ -87,7 +96,7 @@ class BillController extends Controller
                 ->where('user_id', $user->getKey())
                 ->where('is_active', true)
                 ->orderBy('name')
-                ->get(['id', 'name', 'balance']),
+                ->get(['id', 'name', 'account_number', 'balance']),
             'categories' => Category::query()
                 ->where('user_id', $user->getKey())
                 ->where('type', TransactionType::Expense->value)
@@ -183,6 +192,12 @@ class BillController extends Controller
 
         $categoryId = $validated['category_id'] ?? $bill->category_id;
 
+        // Setoran tabungan bukan pengeluaran: uangnya hanya berpindah dari akun
+        // sumber dana ke akun penyimpanan, jadi dicatat sebagai transfer.
+        if ($bill->savings_goal_id !== null) {
+            return $this->paySavingsContribution($request, $bill, $paidOn, $validated);
+        }
+
         DB::transaction(function () use ($bill, $request, $validated, $paidOn, $categoryId): void {
             $transaction = $this->ledger->create($request->user(), [
                 'account_id' => $validated['account_id'],
@@ -258,7 +273,13 @@ class BillController extends Controller
             // Nota pembayaran ikut dilepas; berkas tagihannya tetap disimpan.
             $this->documents->detach($bill, DocumentKind::Receipt);
 
-            $bill->loadMissing('credit');
+            // Setoran tabungan: kembalikan dana dari akun penyimpanan ke sumber.
+            $bill->loadMissing(['credit', 'transfer', 'savingsGoal']);
+
+            if ($bill->transfer) {
+                $this->transfers->reverse($bill->transfer);
+                $bill->forceFill(['transfer_id' => null])->save();
+            }
 
             if ($bill->credit) {
                 $this->credits->revertPayment($bill->credit);
@@ -272,6 +293,65 @@ class BillController extends Controller
             }
         });
 
+        if ($bill->savingsGoal) {
+            $this->savings->refreshStatus($bill->savingsGoal->refresh());
+        }
+
         return back()->with('success', 'Pembayaran tagihan dibatalkan.');
+    }
+
+    /**
+     * Pembayaran setoran tabungan: dicatat sebagai transfer dari akun sumber
+     * dana ke akun penyimpanan, bukan sebagai pengeluaran. Karena itu setoran
+     * tidak mempengaruhi arus kas maupun anggaran bulanan.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function paySavingsContribution(
+        Request $request,
+        Bill $bill,
+        CarbonImmutable $paidOn,
+        array $validated,
+    ): RedirectResponse {
+        $bill->loadMissing('savingsGoal');
+        $goal = $bill->savingsGoal;
+
+        if ($goal === null) {
+            return back()->with('error', 'Target tabungan untuk tagihan ini sudah tidak ada.');
+        }
+
+        if ((int) $goal->source_account_id === (int) $goal->storage_account_id) {
+            return back()->with('error', 'Akun sumber dana dan akun penyimpanan tabungan tidak boleh sama.');
+        }
+
+        DB::transaction(function () use ($bill, $goal, $request, $validated, $paidOn): void {
+            $transfer = $this->transfers->create($request->user(), [
+                // Akun asal boleh ditimpa saat membayar, default akun sumber dana.
+                'from_account_id' => $validated['account_id'] ?? $goal->source_account_id,
+                'to_account_id' => $goal->storage_account_id,
+                'amount' => $bill->amount,
+                'transfer_date' => $paidOn->toDateString(),
+                'description' => 'Setoran tabungan: '.$goal->name,
+            ], $goal);
+
+            $bill->forceFill([
+                'status' => BillStatus::Paid->value,
+                'paid_at' => now(),
+                'account_id' => $transfer->from_account_id,
+                'transfer_id' => $transfer->getKey(),
+            ])->save();
+        });
+
+        if ($request->hasFile('receipt')) {
+            $this->documents->attach($request->user(), $bill, $request->file('receipt'), DocumentKind::Receipt);
+        }
+
+        $goal->refresh();
+        $this->savings->refreshStatus($goal);
+
+        // Siapkan tagihan setoran bulan berikutnya.
+        $this->savings->generateNextBill($goal->refresh());
+
+        return back()->with('success', 'Setoran '.$goal->name.' berhasil dipindahkan ke akun penyimpanan.');
     }
 }

@@ -11,8 +11,10 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\SavingsGoalController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportController;
+use App\Http\Controllers\TransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -61,6 +63,19 @@ Route::middleware('auth')->group(function (): void {
         ->name('credits.next-installment');
     Route::put('credits/{credit}', [CreditController::class, 'update'])->name('credits.update');
     Route::delete('credits/{credit}', [CreditController::class, 'destroy'])->name('credits.destroy');
+
+    // --- Tabungan terencana ------------------------------------------------
+    Route::get('savings', [SavingsGoalController::class, 'index'])->name('savings.index');
+    Route::post('savings', [SavingsGoalController::class, 'store'])->name('savings.store');
+    Route::get('savings/{goal}', [SavingsGoalController::class, 'show'])->name('savings.show');
+    Route::post('savings/{goal}/next-contribution', [SavingsGoalController::class, 'billNextEarly'])
+        ->name('savings.next-contribution');
+    Route::put('savings/{goal}', [SavingsGoalController::class, 'update'])->name('savings.update');
+    Route::delete('savings/{goal}', [SavingsGoalController::class, 'destroy'])->name('savings.destroy');
+
+    // --- Transfer antar akun -----------------------------------------------
+    Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+    Route::delete('transfers/{transfer}', [TransferController::class, 'destroy'])->name('transfers.destroy');
 
     // --- Master data -------------------------------------------------------
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');

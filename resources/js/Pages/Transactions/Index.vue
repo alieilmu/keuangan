@@ -4,6 +4,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import Card from '../../Components/Card.vue';
 import EmptyState from '../../Components/EmptyState.vue';
 import Modal from '../../Components/Modal.vue';
+import TransferModal from '../../Components/TransferModal.vue';
 import PeriodSwitcher from '../../Components/PeriodSwitcher.vue';
 import TransactionFormModal from '../../Components/TransactionFormModal.vue';
 import { formatDate, formatRupiah } from '../../lib/format';
@@ -14,11 +15,13 @@ const props = defineProps({
     period: Object,
     accounts: Array,
     categories: Array,
+    transfers: Array,
 });
 
 const showForm = ref(false);
 const editing = ref(null);
 const showImport = ref(false);
+const showTransfer = ref(false);
 
 const filters = reactive({
     type: props.filters.type ?? '',
@@ -75,6 +78,29 @@ function destroy(transaction) {
 
 const importForm = useForm({ file: null });
 
+// Pemasukan & transfer masuk menambah saldo, sisanya mengurangi.
+const PLUS_TYPES = ['income', 'transfer_in'];
+
+function amountSign(transaction) {
+    return PLUS_TYPES.includes(transaction.type) ? '+' : '-';
+}
+
+function amountTone(transaction) {
+    if (transaction.is_transfer) {
+        return 'text-sky-600';
+    }
+
+    return transaction.type === 'income' ? 'text-emerald-600' : 'text-slate-900';
+}
+
+function cancelTransfer(transfer) {
+    if (!window.confirm('Batalkan transfer ini? Saldo kedua akun akan dikembalikan.')) {
+        return;
+    }
+
+    router.delete(`/transfers/${transfer.id}`, { preserveScroll: true });
+}
+
 function submitImport() {
     importForm.post('/transactions/import', {
         preserveScroll: true,
@@ -121,6 +147,13 @@ function submitImport() {
                 </a>
                 <button
                     type="button"
+                    class="rounded-xl bg-sky-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-sky-700"
+                    @click="showTransfer = true"
+                >
+                    Transfer
+                </button>
+                <button
+                    type="button"
                     class="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                     @click="create"
                 >
@@ -144,6 +177,8 @@ function submitImport() {
                 <option value="">Semua tipe</option>
                 <option value="income">Pemasukan</option>
                 <option value="expense">Pengeluaran</option>
+                <option value="transfer_out">Transfer Keluar</option>
+                <option value="transfer_in">Transfer Masuk</option>
             </select>
             <select
                 v-model="filters.category_id"
@@ -172,9 +207,19 @@ function submitImport() {
                     class="group flex items-center gap-3 py-3"
                 >
                     <span
+                        v-if="!transaction.is_transfer"
                         class="size-2.5 shrink-0 rounded-full"
                         :style="{ backgroundColor: transaction.category_color || '#cbd5e1' }"
                     />
+                    <span
+                        v-else
+                        class="grid size-5 shrink-0 place-items-center rounded-full bg-sky-50 text-sky-600"
+                        title="Mutasi transfer"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="size-3">
+                            <path d="M4 8h13l-3-3M20 16H7l3 3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
 
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm text-slate-800">
@@ -183,18 +228,27 @@ function submitImport() {
                         <p class="truncate text-xs text-slate-400">
                             {{ formatDate(transaction.transaction_date) }} - {{ transaction.account }}
                             <span v-if="transaction.category"> - {{ transaction.category }}</span>
+                            <span v-if="transaction.transfer_counterpart">
+                                - {{ transaction.type === 'transfer_out' ? 'ke' : 'dari' }}
+                                {{ transaction.transfer_counterpart }}
+                            </span>
                         </p>
                     </div>
 
-                    <p
-                        class="shrink-0 text-sm font-semibold tabular-nums"
-                        :class="transaction.type === 'income' ? 'text-emerald-600' : 'text-slate-900'"
-                    >
-                        {{ transaction.type === 'income' ? '+' : '-' }}{{ formatRupiah(transaction.amount) }}
+                    <p class="shrink-0 text-sm font-semibold tabular-nums" :class="amountTone(transaction)">
+                        {{ amountSign(transaction) }}{{ formatRupiah(transaction.amount) }}
                     </p>
 
                     <div class="flex shrink-0 items-center gap-1">
+                        <span
+                            v-if="transaction.is_transfer"
+                            class="px-2 text-[11px] font-medium text-slate-400"
+                            title="Kelola lewat panel Transfer di bawah"
+                        >
+                            Transfer
+                        </span>
                         <button
+                            v-if="!transaction.is_transfer"
                             type="button"
                             class="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                             aria-label="Ubah"
@@ -205,6 +259,7 @@ function submitImport() {
                             </svg>
                         </button>
                         <button
+                            v-if="!transaction.is_transfer"
                             type="button"
                             class="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
                             aria-label="Hapus"
@@ -252,6 +307,57 @@ function submitImport() {
         :transaction="editing"
         @close="showForm = false"
     />
+
+    <!-- Riwayat transfer periode ini -->
+    <Card
+        v-if="transfers.length"
+        class="mt-5"
+        title="Transfer Antar Akun"
+        :subtitle="`${transfers.length} transfer pada ${period.label}`"
+    >
+        <ul class="divide-y divide-slate-100">
+            <li v-for="transfer in transfers" :key="transfer.id" class="flex flex-wrap items-center gap-3 py-3">
+                <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-600">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+                        <path d="M4 8h13l-3-3M20 16H7l3 3" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </span>
+
+                <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium text-slate-800">
+                        {{ transfer.from_account }} &rarr; {{ transfer.to_account }}
+                    </p>
+                    <p class="truncate text-xs text-slate-400">
+                        {{ transfer.date_label }}
+                        <span v-if="transfer.description"> - {{ transfer.description }}</span>
+                        <span v-if="transfer.reference"> - Ref {{ transfer.reference }}</span>
+                    </p>
+                    <p v-if="transfer.same_institution" class="mt-0.5 text-[11px] font-medium text-sky-600">
+                        Nomor rekening sama - mutasi keluar &amp; masuk tetap tercatat
+                    </p>
+                    <p v-if="transfer.savings_goal" class="mt-0.5 text-[11px] font-medium text-emerald-600">
+                        Setoran tabungan: {{ transfer.savings_goal }}
+                    </p>
+                </div>
+
+                <p class="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                    {{ formatRupiah(transfer.amount) }}
+                </p>
+
+                <button
+                    v-if="!transfer.savings_goal_id"
+                    type="button"
+                    class="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                    aria-label="Batalkan transfer"
+                    @click="cancelTransfer(transfer)"
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+                        <path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </li>
+        </ul>
+    </Card>
 
     <!-- Import Excel -->
     <Modal :open="showImport" title="Import Transaksi dari Excel" @close="showImport = false">
@@ -303,4 +409,6 @@ function submitImport() {
             </div>
         </form>
     </Modal>
+
+    <TransferModal :open="showTransfer" :accounts="accounts" @close="showTransfer = false" />
 </template>

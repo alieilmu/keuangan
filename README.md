@@ -18,6 +18,8 @@ dan mobile.
 | Notifikasi | Web Push (VAPID) + notifikasi in-app; dipicu scheduler harian dan evaluasi realtime saat transaksi dibuat |
 | Kredit & Cicilan | Pinjaman jangka panjang (KPR, cicilan kendaraan): tagihan angsuran dibuat otomatis tiap bulan, progress "Bulan ke-12 dari 36", sisa tenor berkurang sendiri saat tagihannya dibayar, halaman detail berisi histori pembayaran per angsuran, plus tombol "Tagih Angsuran Berikutnya" untuk membayar di muka |
 | Dokumen | Unggah PDF/gambar untuk berkas tagihan (wajib saat tagihan dibuat manual) dan nota pembayaran (opsional saat membayar). Berkas disimpan di disk privat dan hanya bisa dibuka pemiliknya |
+| Tabungan Terencana | Target tabungan dengan alokasi akun ganda (akun sumber dana + akun penyimpanan). Setoran bulanan ditagih lewat modul Tagihan; saat dibayar dana dipindahkan sebagai transfer, bukan dicatat sebagai pengeluaran |
+| Transfer Dana | Pemindahan saldo antar akun (e-wallet, bank, tunai). Saldo pengirim berkurang dan penerima bertambah serentak, dengan dua baris mutasi (keluar & masuk) - termasuk untuk transfer sesama bank atau nomor rekening yang sama |
 | Dashboard | 3 hero card arus kas, pie chart alokasi pengeluaran, carousel tagihan yang bisa di-swipe, indikator anggaran |
 | Master data | Akun dana & kategori dengan pemilih warna: palet 10 warna x 5 kecerahan (50 pilihan cepat) plus input RGB/hex bebas |
 

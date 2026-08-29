@@ -24,6 +24,8 @@ class AccountController extends Controller
                 'name' => $account->name,
                 'type' => $account->type->value,
                 'type_label' => $account->type->label(),
+                'account_number' => $account->account_number,
+                'requires_account_number' => $account->requiresAccountNumber(),
                 'opening_balance' => (float) $account->opening_balance,
                 'balance' => (float) $account->balance,
                 'color' => $account->color,

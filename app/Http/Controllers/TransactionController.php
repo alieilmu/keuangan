@@ -8,7 +8,10 @@ use App\Jobs\EvaluateBudgetThreshold;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Models\Transfer;
+use App\Services\BudgetService;
 use App\Services\LedgerService;
+use App\Services\TransferService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,7 +38,12 @@ class TransactionController extends Controller
         $period = DashboardController::resolvePeriod($filters['period']);
 
         $transactions = Transaction::query()
-            ->with(['account:id,name', 'category:id,name,color'])
+            ->with([
+                'account:id,name',
+                'category:id,name,color',
+                'transfer.fromAccount:id,name,account_number',
+                'transfer.toAccount:id,name,account_number',
+            ])
             ->where('user_id', $user->getKey())
             ->inPeriod($period->year, $period->month)
             ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
@@ -57,6 +65,13 @@ class TransactionController extends Controller
                 'category_id' => $transaction->category_id,
                 'category' => $transaction->category?->name,
                 'category_color' => $transaction->category?->color,
+                'is_transfer' => $transaction->isTransferLeg(),
+                'transfer_id' => $transaction->transfer_id,
+                'transfer_counterpart' => $transaction->transfer
+                    ? ($transaction->type === TransactionType::TransferOut
+                        ? $transaction->transfer->toAccount?->displayName()
+                        : $transaction->transfer->fromAccount?->displayName())
+                    : null,
             ]);
 
         return Inertia::render('Transactions/Index', [
@@ -69,11 +84,24 @@ class TransactionController extends Controller
             'accounts' => Account::query()
                 ->where('user_id', $user->getKey())
                 ->orderBy('name')
-                ->get(['id', 'name', 'type', 'balance']),
+                ->get(['id', 'name', 'type', 'account_number', 'balance']),
             'categories' => Category::query()
                 ->where('user_id', $user->getKey())
                 ->orderBy('name')
                 ->get(['id', 'name', 'type', 'color']),
+            // Riwayat transfer pada periode yang sama, untuk panel transfer.
+            'transfers' => Transfer::query()
+                ->with(['fromAccount:id,name,account_number', 'toAccount:id,name,account_number', 'savingsGoal:id,name'])
+                ->where('user_id', $user->getKey())
+                ->whereBetween('transfer_date', BudgetService::periodRange($period->year, $period->month))
+                ->orderByDesc('transfer_date')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (Transfer $transfer) => TransferService::present($transfer))
+                ->values(),
+            'transaction_types' => collect(TransactionType::manualCases())
+                ->map(fn (TransactionType $type) => ['value' => $type->value, 'label' => $type->label()])
+                ->values(),
         ]);
     }
 
@@ -90,6 +118,10 @@ class TransactionController extends Controller
     {
         $this->authorize('update', $transaction);
 
+        if ($transaction->isTransferLeg()) {
+            return back()->with('error', 'Mutasi transfer tidak bisa diubah di sini. Batalkan transfernya lalu catat ulang.');
+        }
+
         $previousCategory = $transaction->category_id;
 
         $this->ledger->update($transaction, $request->validated());
@@ -102,6 +134,10 @@ class TransactionController extends Controller
     public function destroy(Transaction $transaction): RedirectResponse
     {
         $this->authorize('delete', $transaction);
+
+        if ($transaction->isTransferLeg()) {
+            return back()->with('error', 'Mutasi transfer harus dibatalkan lewat riwayat transfer agar kedua sisinya ikut terhapus.');
+        }
 
         $this->ledger->delete($transaction);
 

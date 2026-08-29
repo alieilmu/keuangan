@@ -15,6 +15,7 @@ const NAV = [
     { href: '/transactions', label: 'Transaksi', icon: 'M4 7h16M4 12h10M4 17h7' },
     { href: '/budgets', label: 'Anggaran', icon: 'M12 3v18M5 8h14M5 16h14' },
     { href: '/bills', label: 'Tagihan', icon: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6' },
+    { href: '/savings', label: 'Tabungan', icon: 'M4 8h16v10H4zM4 8a4 4 0 0 1 8 0M16 13h.01' },
     { href: '/credits', label: 'Kredit', icon: 'M3 8h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 8l2-4h14l2 4M7 15h4' },
     { href: '/accounts', label: 'Akun', icon: 'M3 7h18v10H3zM3 11h18' },
     { href: '/categories', label: 'Kategori', icon: 'M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v5H4zM13 14h7v5h-7z' },

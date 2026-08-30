@@ -321,53 +321,57 @@ function submitImport() {
         :subtitle="`${transfers.length} transfer pada ${period.label}`"
     >
         <ul class="divide-y divide-slate-100">
-            <li v-for="transfer in transfers" :key="transfer.id" class="flex flex-wrap items-center gap-3 py-3">
-                <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-600">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
-                        <path d="M4 8h13l-3-3M20 16H7l3 3" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </span>
+            <li v-for="transfer in transfers" :key="transfer.id" class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center">
+                <div class="flex min-w-0 flex-1 items-start gap-3">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+                            <path d="M4 8h13l-3-3M20 16H7l3 3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
 
-                <div class="min-w-0 flex-1">
-                    <p class="flex min-w-0 items-center gap-1.5 text-sm font-medium text-slate-800">
-                        <span class="truncate">
-                            {{ transfer.from_account }} &rarr; {{ transfer.to_account }}
-                        </span>
-                        <span
-                            v-if="transfer.kind !== 'transfer'"
-                            class="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800"
-                        >
-                            {{ transfer.kind_label }}
-                        </span>
-                    </p>
-                    <p class="truncate text-xs text-slate-400">
-                        {{ transfer.date_label }}
-                        <span v-if="transfer.description"> - {{ transfer.description }}</span>
-                        <span v-if="transfer.reference"> - Ref {{ transfer.reference }}</span>
-                    </p>
-                    <p v-if="transfer.same_institution" class="mt-0.5 text-[11px] font-medium text-sky-600">
-                        Nomor rekening sama - mutasi keluar &amp; masuk tetap tercatat
-                    </p>
-                    <p v-if="transfer.savings_goal" class="mt-0.5 text-[11px] font-medium text-emerald-600">
-                        Setoran tabungan: {{ transfer.savings_goal }}
-                    </p>
+                    <div class="min-w-0 flex-1">
+                        <p class="flex min-w-0 items-center gap-1.5 text-sm font-medium text-slate-800">
+                            <span class="truncate">
+                                {{ transfer.from_account }} &rarr; {{ transfer.to_account }}
+                            </span>
+                            <span
+                                v-if="transfer.kind !== 'transfer'"
+                                class="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800"
+                            >
+                                {{ transfer.kind_label }}
+                            </span>
+                        </p>
+                        <p class="truncate text-xs text-slate-400">
+                            {{ transfer.date_label }}
+                            <span v-if="transfer.description"> - {{ transfer.description }}</span>
+                            <span v-if="transfer.reference"> - Ref {{ transfer.reference }}</span>
+                        </p>
+                        <p v-if="transfer.same_institution" class="mt-0.5 text-[11px] font-medium text-sky-600">
+                            Nomor rekening sama - mutasi keluar &amp; masuk tetap tercatat
+                        </p>
+                        <p v-if="transfer.savings_goal" class="mt-0.5 text-[11px] font-medium text-emerald-600">
+                            Setoran tabungan: {{ transfer.savings_goal }}
+                        </p>
+                    </div>
                 </div>
 
-                <p class="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
-                    {{ formatRupiah(transfer.amount) }}
-                </p>
+                <div class="flex shrink-0 items-center justify-between gap-3 pl-11 sm:justify-end sm:pl-0">
+                    <p class="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                        {{ formatRupiah(transfer.amount) }}
+                    </p>
 
-                <button
-                    v-if="!transfer.savings_goal_id"
-                    type="button"
-                    class="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                    aria-label="Batalkan transfer"
-                    @click="cancelTransfer(transfer)"
-                >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
-                        <path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </button>
+                    <button
+                        v-if="!transfer.savings_goal_id"
+                        type="button"
+                        class="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                        aria-label="Batalkan transfer"
+                        @click="cancelTransfer(transfer)"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+                            <path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </div>
             </li>
         </ul>
     </Card>

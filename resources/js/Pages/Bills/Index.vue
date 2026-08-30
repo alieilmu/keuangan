@@ -166,51 +166,58 @@ function toneLabel(bill) {
 
         <Card>
             <ul v-if="bills.length" class="divide-y divide-slate-100">
-                <li v-for="bill in bills" :key="bill.id" class="flex flex-wrap items-center gap-3 py-3">
-                    <span
-                        class="size-2.5 shrink-0 rounded-full"
-                        :style="{ backgroundColor: bill.category_color || '#cbd5e1' }"
-                    />
+                <li v-for="bill in bills" :key="bill.id" class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center">
+                    <div class="flex min-w-0 flex-1 items-start gap-3">
+                        <span
+                            class="mt-1 size-2.5 shrink-0 rounded-full"
+                            :style="{ backgroundColor: bill.category_color || '#cbd5e1' }"
+                        />
 
-                    <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <p class="truncate text-sm font-medium text-slate-800">{{ bill.title }}</p>
-                            <span
-                                class="rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset"
-                                :class="tone(bill)"
-                            >
-                                {{ toneLabel(bill) }}
-                            </span>
-                        </div>
-                        <p class="truncate text-xs text-slate-400">
-                            <span v-if="bill.installment_label" class="font-medium text-sky-600">
-                                {{ bill.installment_label }} -
-                            </span>
-                            Jatuh tempo {{ bill.due_label }}
-                            <span v-if="bill.account"> - {{ bill.account }}</span>
-                        </p>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="truncate text-sm font-medium text-slate-800">{{ bill.title }}</p>
+                                <span
+                                    class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset"
+                                    :class="tone(bill)"
+                                >
+                                    {{ toneLabel(bill) }}
+                                </span>
+                            </div>
+                            <p class="truncate text-xs text-slate-400">
+                                <span v-if="bill.installment_label" class="font-medium text-sky-600">
+                                    {{ bill.installment_label }} -
+                                </span>
+                                Jatuh tempo {{ bill.due_label }}
+                                <span v-if="bill.account"> - {{ bill.account }}</span>
+                            </p>
 
-                        <div class="mt-1 flex flex-wrap items-center gap-1.5">
-                            <DocumentChip v-if="bill.invoice_document" :document="bill.invoice_document" tone="sky" />
-                            <DocumentChip
-                                v-if="bill.receipt_document"
-                                :document="bill.receipt_document"
-                                tone="emerald"
-                            />
-                            <span
-                                v-if="!bill.invoice_document"
-                                class="rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700"
-                            >
-                                Dokumen tagihan belum diunggah
-                            </span>
+                            <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                <DocumentChip
+                                    v-if="bill.invoice_document"
+                                    :document="bill.invoice_document"
+                                    tone="sky"
+                                />
+                                <DocumentChip
+                                    v-if="bill.receipt_document"
+                                    :document="bill.receipt_document"
+                                    tone="emerald"
+                                />
+                                <span
+                                    v-if="!bill.invoice_document"
+                                    class="rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700"
+                                >
+                                    Dokumen tagihan belum diunggah
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <p class="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
-                        {{ formatRupiah(bill.amount) }}
-                    </p>
+                    <div class="flex shrink-0 items-center justify-between gap-3 pl-[1.375rem] sm:justify-end sm:pl-0">
+                        <p class="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                            {{ formatRupiah(bill.amount) }}
+                        </p>
 
-                    <div class="flex shrink-0 items-center gap-1.5">
+                        <div class="flex shrink-0 items-center gap-1.5">
                         <button
                             v-if="bill.status === 'unpaid'"
                             type="button"
@@ -249,6 +256,7 @@ function toneLabel(bill) {
                                 <path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                         </button>
+                        </div>
                     </div>
                 </li>
             </ul>

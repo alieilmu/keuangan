@@ -50,7 +50,7 @@ const attention = computed(() =>
                 <p class="mt-0.5 text-xs text-slate-500">Periode {{ period.label }}</p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex min-w-0 flex-wrap items-center gap-2">
                 <ScopeSwitcher :scope="scope" :options="scope_options" />
                 <PeriodSwitcher :period="period.iso" />
                 <button

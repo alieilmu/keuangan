@@ -31,9 +31,9 @@ function logout() {
 </script>
 
 <template>
-    <div class="min-h-dvh bg-gray-50">
+    <div class="min-h-dvh overflow-x-clip bg-gray-50">
         <!-- Top navigation -->
-        <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
+        <header class="fixed inset-x-0 top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
             <div class="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
                 <Link href="/dashboard" class="flex items-center gap-2.5">
                     <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white">
@@ -98,7 +98,7 @@ function logout() {
             </nav>
         </header>
 
-        <main class="mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:px-6 sm:pb-10">
+        <main class="mx-auto w-full max-w-6xl px-4 pb-24 pt-[5.25rem] sm:px-6 sm:pb-10 sm:pt-[7.5rem]">
             <slot />
         </main>
 

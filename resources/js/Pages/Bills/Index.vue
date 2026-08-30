@@ -132,7 +132,7 @@ function toneLabel(bill) {
                 </p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex min-w-0 flex-wrap items-center gap-2">
                 <div class="inline-flex rounded-xl bg-white p-1 ring-1 ring-slate-200">
                     <button
                         v-for="option in [

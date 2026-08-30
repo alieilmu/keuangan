@@ -112,8 +112,8 @@ function destroy(account) {
                 :class="account.is_active ? '' : 'opacity-60'"
             >
                 <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="size-2.5 rounded-full" :style="{ backgroundColor: account.color }" />
+                    <div class="flex min-w-0 items-center gap-2">
+                        <span class="size-2.5 shrink-0 rounded-full" :style="{ backgroundColor: account.color }" />
                         <p class="truncate text-sm font-semibold text-slate-900">{{ account.name }}</p>
                     </div>
 

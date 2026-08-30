@@ -41,6 +41,27 @@ function label(account) {
 const source = computed(() => props.accounts.find((a) => a.id === Number(form.from_account_id)) ?? null);
 const target = computed(() => props.accounts.find((a) => a.id === Number(form.to_account_id)) ?? null);
 
+// Sifat perpindahan, mengikuti App\Enums\TransferKind di sisi server:
+// non-tunai -> tunai = tarik tunai, tunai -> non-tunai = setor tunai.
+const kind = computed(() => {
+    const from = source.value?.type;
+    const to = target.value?.type;
+
+    if (!from || !to || from === to) {
+        return null;
+    }
+
+    if (to === 'cash') {
+        return 'Tarik Tunai';
+    }
+
+    if (from === 'cash') {
+        return 'Setor Tunai';
+    }
+
+    return null;
+});
+
 // Transfer sesama bank / nomor rekening sama tetap sah, hanya diberi catatan.
 const sameNumber = computed(
     () =>
@@ -88,6 +109,14 @@ function submit() {
                     </option>
                 </select>
             </FormField>
+
+            <p
+                v-if="kind"
+                class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-900 ring-1 ring-inset ring-amber-600/20"
+            >
+                Perpindahan ini dicatat sebagai <strong>{{ kind }}</strong>, karena melibatkan akun
+                berjenis Tunai. Saldo kedua akun tetap disesuaikan seperti transfer biasa.
+            </p>
 
             <p
                 v-if="sameNumber"

@@ -329,8 +329,16 @@ function submitImport() {
                 </span>
 
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium text-slate-800">
-                        {{ transfer.from_account }} &rarr; {{ transfer.to_account }}
+                    <p class="flex min-w-0 items-center gap-1.5 text-sm font-medium text-slate-800">
+                        <span class="truncate">
+                            {{ transfer.from_account }} &rarr; {{ transfer.to_account }}
+                        </span>
+                        <span
+                            v-if="transfer.kind !== 'transfer'"
+                            class="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800"
+                        >
+                            {{ transfer.kind_label }}
+                        </span>
                     </p>
                     <p class="truncate text-xs text-slate-400">
                         {{ transfer.date_label }}

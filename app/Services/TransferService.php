@@ -100,7 +100,11 @@ class TransferService
             ? $transfer->toAccount
             : $transfer->fromAccount;
 
-        $prefix = $type === TransactionType::TransferOut ? 'Transfer ke ' : 'Transfer dari ';
+        // Awalan keterangan mengikuti sifat perpindahan: bank -> tunai dicatat
+        // sebagai tarik tunai, tunai -> non-tunai sebagai setor tunai.
+        [$outPrefix, $inPrefix] = $transfer->kind()->prefixes();
+
+        $prefix = $type === TransactionType::TransferOut ? $outPrefix : $inPrefix;
 
         /** @var Transaction $transaction */
         $transaction = Transaction::query()->create([
@@ -167,6 +171,8 @@ class TransferService
             'to_account_name' => $transfer->toAccount?->name,
             'to_account_number' => $transfer->toAccount?->account_number,
             'same_institution' => $transfer->isSameInstitution(),
+            'kind' => $transfer->kind()->value,
+            'kind_label' => $transfer->kind()->label(),
             'savings_goal_id' => $transfer->savings_goal_id,
             'savings_goal' => $transfer->savingsGoal?->name,
         ];

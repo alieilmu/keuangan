@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TransferKind;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -56,6 +57,17 @@ class Transfer extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * Sifat perpindahan: tarik tunai, setor tunai, atau transfer biasa.
+     * Diturunkan dari jenis akun, jadi transfer lama ikut dikenali.
+     */
+    public function kind(): TransferKind
+    {
+        $this->loadMissing(['fromAccount', 'toAccount']);
+
+        return TransferKind::between($this->fromAccount?->type, $this->toAccount?->type);
     }
 
     /**

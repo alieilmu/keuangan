@@ -105,3 +105,4 @@ Route::middleware('auth')->group(function (): void {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
+require __DIR__."/admin.php";

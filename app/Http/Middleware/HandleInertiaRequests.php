@@ -32,12 +32,14 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'email' => $user->email,
                     'initials' => $user->initials(),
+                    'is_admin' => $user->isAdmin(),
                 ] : null,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'import_failures' => fn () => $request->session()->get('import_failures'),
+                'generated_password' => fn () => $request->session()->get('generated_password'),
             ],
             // Lazy prop: query notifikasi hanya jalan saat user sudah login.
             'notifications' => fn () => $user ? [

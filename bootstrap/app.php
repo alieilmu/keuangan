@@ -4,6 +4,8 @@ use App\Console\Commands\CheckBudgetThresholds;
 use App\Console\Commands\GenerateCreditBills;
 use App\Console\Commands\GenerateSavingsBills;
 use App\Console\Commands\RemindDueBills;
+use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\EnsureUserIsNotBlocked;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -27,6 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            EnsureUserIsNotBlocked::class,
+        ]);
+
+        $middleware->alias([
+            'admin' => EnsureUserIsAdmin::class,
         ]);
 
         // Aplikasi berjalan di belakang Nginx dalam container.

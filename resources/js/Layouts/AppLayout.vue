@@ -69,6 +69,13 @@ function logout() {
                             <p class="truncate text-xs font-semibold text-slate-800">{{ user?.name }}</p>
                             <p class="truncate text-[11px] text-slate-400">{{ user?.email }}</p>
                         </div>
+                        <Link
+                            v-if="user?.is_admin"
+                            href="/admin"
+                            class="block w-full rounded-lg px-2.5 py-2 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                        >
+                            Panel Admin
+                        </Link>
                         <button
                             type="button"
                             class="w-full rounded-lg px-2.5 py-2 text-left text-xs font-medium text-red-600 transition hover:bg-red-50"

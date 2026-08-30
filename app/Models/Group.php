@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Satu kas bersama yang dipakai beberapa user.
@@ -20,5 +21,35 @@ class Group extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /** @return HasOne<Subscription, $this> */
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class);
+    }
+
+    /**
+     * Batas jumlah anggota dari paket langganan saat ini. Null = tanpa
+     * batas (paket Premium) atau grup belum berlangganan sama sekali.
+     */
+    public function memberQuota(): ?int
+    {
+        return $this->subscription?->plan?->max_members;
+    }
+
+    /** Null = tanpa batas. */
+    public function remainingQuota(): ?int
+    {
+        $quota = $this->memberQuota();
+
+        return $quota === null ? null : max($quota - $this->users()->count(), 0);
+    }
+
+    public function hasCapacityFor(int $additional = 1): bool
+    {
+        $quota = $this->memberQuota();
+
+        return $quota === null || ($this->users()->count() + $additional) <= $quota;
     }
 }

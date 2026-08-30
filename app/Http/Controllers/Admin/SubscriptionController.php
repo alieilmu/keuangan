@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Group;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +35,10 @@ class SubscriptionController extends Controller
                 'id' => null,
                 'group_id' => $group->id,
                 'group_name' => $group->name,
-                'members' => $group->users->pluck('name'),
+                'members' => $group->users->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name]),
+                'member_count' => $group->users->count(),
+                'member_quota' => null,
+                'quota_full' => false,
                 'plan_code' => null,
                 'plan_name' => 'Belum berlangganan',
                 'price' => 0,
@@ -46,10 +50,17 @@ class SubscriptionController extends Controller
 
         return Inertia::render('Admin/Subscriptions/Index', [
             'subscriptions' => $subscriptions->concat($withoutSubscription)->values(),
-            'plans' => SubscriptionPlan::query()->where('is_active', true)->orderBy('price')->get(
-                ['id', 'code', 'name', 'price']
+            'plans' => SubscriptionPlan::query()->orderBy('price')->get(
+                ['id', 'code', 'name', 'price', 'max_members', 'is_active']
             ),
             'groups' => Group::query()->orderBy('name')->get(['id', 'name']),
+            // Kandidat yang bisa ditambahkan sebagai anggota grup: belum
+            // tergabung grup mana pun dan bukan akun admin.
+            'unassigned_users' => User::query()
+                ->whereNull('group_id')
+                ->where('is_admin', false)
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']),
         ]);
     }
 
@@ -66,6 +77,15 @@ class SubscriptionController extends Controller
         ]);
 
         $plan = SubscriptionPlan::findOrFail($validated['subscription_plan_id']);
+        $group = Group::findOrFail($validated['group_id']);
+
+        // Menegakkan kuota SAAT downgrade: jangan sampai grup berakhir
+        // dengan anggota melebihi batas paket barunya.
+        if ($plan->max_members !== null && $group->users()->count() > $plan->max_members) {
+            return back()->withErrors([
+                'subscription_plan_id' => "Grup ini punya {$group->users()->count()} anggota, melebihi kuota paket {$plan->name} ({$plan->max_members}). Keluarkan anggota dulu sebelum downgrade.",
+            ]);
+        }
 
         DB::transaction(function () use ($validated, $plan, $request): void {
             Subscription::query()->updateOrCreate(
@@ -87,11 +107,16 @@ class SubscriptionController extends Controller
     /** @return array<string, mixed> */
     private function present(Subscription $subscription): array
     {
+        $group = $subscription->group;
+
         return [
             'id' => $subscription->id,
             'group_id' => $subscription->group_id,
-            'group_name' => $subscription->group?->name,
-            'members' => $subscription->group?->users->pluck('name') ?? collect(),
+            'group_name' => $group?->name,
+            'members' => $group?->users->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name]) ?? collect(),
+            'member_count' => $group?->users->count() ?? 0,
+            'member_quota' => $group?->memberQuota(),
+            'quota_full' => $group ? ! $group->hasCapacityFor() : false,
             'plan_code' => $subscription->plan?->code,
             'plan_name' => $subscription->plan?->name,
             'price' => $subscription->plan?->price ?? 0,

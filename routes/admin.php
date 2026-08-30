@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\GroupController;
 use App\Http\Controllers\Admin\PaymentSimulationController;
 use App\Http\Controllers\Admin\SubscriptionController;
+use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +30,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // --- Manajemen Subscription -----------------------------------------
     Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::put('subscriptions', [SubscriptionController::class, 'update'])->name('subscriptions.update');
+
+    // --- Katalog paket: kuota anggota & harga -----------------------------
+    Route::put('plans/{plan}', [SubscriptionPlanController::class, 'update'])->name('plans.update');
+
+    // --- Keanggotaan grup/keluarga (ditegakkan sesuai kuota paket) --------
+    Route::post('groups/{group}/members', [GroupController::class, 'addMember'])->name('groups.members.add');
+    Route::delete('groups/{group}/members/{user}', [GroupController::class, 'removeMember'])->name('groups.members.remove');
 
     // --- Business Analytics ----------------------------------------------
     Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');

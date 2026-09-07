@@ -11,6 +11,7 @@ import CreditProgress from '../Components/CreditProgress.vue';
 import TransactionFormModal from '../Components/TransactionFormModal.vue';
 import PayBillModal from '../Components/PayBillModal.vue';
 import PeriodSwitcher from '../Components/PeriodSwitcher.vue';
+import DemoBanner from '../Components/DemoBanner.vue';
 import ScopeSwitcher from '../Components/ScopeSwitcher.vue';
 import { formatRupiah } from '../lib/format';
 
@@ -43,6 +44,8 @@ const attention = computed(() =>
     <Head title="Dashboard" />
 
     <div class="space-y-5">
+        <DemoBanner />
+
         <!-- Judul + aksi -->
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="min-w-0">

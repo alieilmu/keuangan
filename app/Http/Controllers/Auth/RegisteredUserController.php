@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\SubscriptionStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Group;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\DefaultDataProvisioner;
 use Illuminate\Http\RedirectResponse;
@@ -32,6 +35,29 @@ class RegisteredUserController extends Controller
 
         $user = DB::transaction(function () use ($data): User {
             $user = User::query()->create($data);
+
+            // Setiap akun baru menjadi tenant-nya sendiri, lengkap dengan
+            // langganan Demo berdurasi satu pekan. Sebelumnya pendaftaran
+            // tidak membuat grup maupun subscription sama sekali, sehingga
+            // ada akun yang memakai aplikasi tanpa batas waktu.
+            $group = Group::query()->create(['name' => 'Kas '.$data['name']]);
+
+            $user->update([
+                'group_id' => $group->getKey(),
+                // Mulai dari langkah pertama panduan interaktif.
+                'walkthrough_step' => 1,
+            ]);
+
+            $demo = SubscriptionPlan::query()->where('code', 'demo')->first();
+
+            if ($demo !== null) {
+                $group->subscription()->create([
+                    'subscription_plan_id' => $demo->getKey(),
+                    'status' => SubscriptionStatus::Active->value,
+                    'started_at' => now(),
+                    'expires_at' => now()->addWeek(),
+                ]);
+            }
 
             $this->provisioner->provision($user);
 

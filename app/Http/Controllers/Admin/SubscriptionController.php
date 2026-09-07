@@ -42,10 +42,13 @@ class SubscriptionController extends Controller
                 'plan_code' => null,
                 'plan_name' => 'Belum berlangganan',
                 'price' => 0,
+                'is_demo' => false,
                 'status' => null,
                 'status_label' => 'Belum Ada',
                 'expires_at' => null,
                 'expires_label' => null,
+                'remaining_days' => null,
+                'expired' => false,
             ]);
 
         return Inertia::render('Admin/Subscriptions/Index', [
@@ -120,12 +123,15 @@ class SubscriptionController extends Controller
             'plan_code' => $subscription->plan?->code,
             'plan_name' => $subscription->plan?->name,
             'price' => $subscription->plan?->price ?? 0,
+            'is_demo' => $subscription->isDemo(),
             'status' => $subscription->status->value,
             'status_label' => $subscription->isEffectivelyActive()
                 ? $subscription->status->label()
                 : SubscriptionStatus::Expired->label(),
             'expires_at' => $subscription->expires_at?->toDateString(),
             'expires_label' => $subscription->expires_at?->translatedFormat('d M Y'),
+            'remaining_days' => $subscription->remainingDays(),
+            'expired' => $subscription->hasExpired(),
         ];
     }
 }

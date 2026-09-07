@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\CheckBudgetThresholds;
+use App\Console\Commands\ExpireSubscriptions;
 use App\Console\Commands\GenerateCreditBills;
 use App\Console\Commands\GenerateSavingsBills;
 use App\Console\Commands\RemindDueBills;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         RemindDueBills::class,
         CheckBudgetThresholds::class,
+        ExpireSubscriptions::class,
         GenerateCreditBills::class,
         GenerateSavingsBills::class,
     ])

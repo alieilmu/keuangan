@@ -51,7 +51,7 @@ class Subscription extends Model
     /**
      * Status efektif: langganan berbayar yang lewat tanggal kedaluwarsa
      * dianggap kedaluwarsa meski kolom status di database belum diperbarui
-     * oleh scheduler. Paket Free (expires_at null) selalu aktif.
+     * oleh scheduler. Paket tanpa expires_at selalu aktif.
      */
     public function isEffectivelyActive(): bool
     {
@@ -60,5 +60,33 @@ class Subscription extends Model
         }
 
         return $this->expires_at === null || $this->expires_at->isFuture();
+    }
+
+    public function isDemo(): bool
+    {
+        return $this->plan?->code === 'demo';
+    }
+
+    /**
+     * Sisa hari aktif. Null bila tidak ada tanggal kedaluwarsa (langganan
+     * tanpa batas waktu). Dibulatkan ke ATAS supaya sisa 6 jam tetap
+     * tampil "1 hari lagi", bukan "0 hari" yang membingungkan.
+     */
+    public function remainingDays(): ?int
+    {
+        if ($this->expires_at === null) {
+            return null;
+        }
+
+        if ($this->expires_at->isPast()) {
+            return 0;
+        }
+
+        return (int) ceil(now()->diffInHours($this->expires_at) / 24);
+    }
+
+    public function hasExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
     }
 }

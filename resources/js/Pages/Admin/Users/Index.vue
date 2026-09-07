@@ -84,7 +84,22 @@ function toggleStatus(user) {
                                 <span v-if="user.is_admin" class="shrink-0 rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700">Admin</span>
                                 <span v-if="user.is_blocked" class="shrink-0 rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">Diblokir</span>
                             </p>
-                            <p class="truncate text-xs text-slate-400">{{ user.email }} - {{ user.plan_name }}</p>
+                            <p class="flex flex-wrap items-center gap-1.5 truncate text-xs text-slate-400">
+                                <span class="truncate">{{ user.email }} - {{ user.plan_name }}</span>
+                                <span
+                                    v-if="user.is_demo"
+                                    class="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                                    :class="
+                                        user.expired
+                                            ? 'bg-red-100 text-red-700'
+                                            : user.remaining_days <= 2
+                                              ? 'bg-amber-100 text-amber-700'
+                                              : 'bg-emerald-100 text-emerald-700'
+                                    "
+                                >
+                                    {{ user.expired ? 'Demo habis' : `Demo ${user.remaining_days} hari lagi` }}
+                                </span>
+                            </p>
                         </div>
                     </div>
 

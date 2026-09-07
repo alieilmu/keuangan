@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import NotificationBell from '../Components/NotificationBell.vue';
 import FlashToast from '../Components/FlashToast.vue';
+import WalkthroughPanel from '../Components/WalkthroughPanel.vue';
 import { formatPeriod, currentPeriod } from '../lib/format';
 
 const page = usePage();
@@ -128,6 +129,8 @@ function logout() {
                 </Link>
             </div>
         </nav>
+
+        <WalkthroughPanel />
 
         <FlashToast />
     </div>

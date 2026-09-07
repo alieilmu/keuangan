@@ -15,6 +15,7 @@ use App\Http\Controllers\SavingsGoalController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportController;
 use App\Http\Controllers\TransferController;
+use App\Http\Controllers\WalkthroughController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -102,6 +103,11 @@ Route::middleware('auth')->group(function (): void {
         ->name('push-subscriptions.store');
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])
         ->name('push-subscriptions.destroy');
+
+    // --- Panduan interaktif pengguna baru ----------------------------------
+    Route::post('walkthrough/advance', [WalkthroughController::class, 'advance'])->name('walkthrough.advance');
+    Route::post('walkthrough/skip', [WalkthroughController::class, 'skip'])->name('walkthrough.skip');
+    Route::post('walkthrough/finish', [WalkthroughController::class, 'finish'])->name('walkthrough.finish');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });

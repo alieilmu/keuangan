@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\WalkthroughService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -56,6 +57,34 @@ class HandleInertiaRequests extends Middleware
             'push' => [
                 'vapid_public_key' => config('webpush.vapid.public_key'),
             ],
+            // Status langganan tenant milik user, dipakai banner masa coba
+            // di dashboard. Lazy supaya query-nya tidak jalan untuk tamu.
+            'subscription' => fn () => $this->subscriptionProps($user),
+            // Panduan interaktif pengguna baru.
+            'walkthrough' => fn () => app(WalkthroughService::class)->present($user),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function subscriptionProps(?User $user): ?array
+    {
+        $subscription = $user?->group?->subscription;
+
+        if ($subscription === null) {
+            return null;
+        }
+
+        $subscription->loadMissing('plan');
+
+        return [
+            'plan_code' => $subscription->plan?->code,
+            'plan_name' => $subscription->plan?->name,
+            'is_demo' => $subscription->isDemo(),
+            'remaining_days' => $subscription->remainingDays(),
+            'expired' => $subscription->hasExpired(),
+            'expires_label' => $subscription->expires_at?->translatedFormat('d M Y'),
+        ];
     }
 }

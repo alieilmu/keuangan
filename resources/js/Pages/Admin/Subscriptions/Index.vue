@@ -175,6 +175,19 @@ function quotaTone(sub) {
                                 {{ sub.price > 0 ? formatRupiah(sub.price) + '/bln' : 'Gratis' }}
                                 <span v-if="sub.expires_label"> - s/d {{ sub.expires_label }}</span>
                             </p>
+                            <p
+                                v-if="sub.remaining_days !== null"
+                                class="text-[11px] font-semibold"
+                                :class="
+                                    sub.expired
+                                        ? 'text-red-600'
+                                        : sub.remaining_days <= 2
+                                          ? 'text-amber-600'
+                                          : 'text-emerald-600'
+                                "
+                            >
+                                {{ sub.expired ? 'Sudah berakhir' : `Sisa ${sub.remaining_days} hari aktif` }}
+                            </p>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <button

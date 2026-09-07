@@ -12,7 +12,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
-#[Fillable(['name', 'email', 'password', 'group_id', 'is_admin', 'is_blocked', 'blocked_at'])]
+#[Fillable([
+    'name', 'email', 'password', 'group_id', 'is_admin', 'is_blocked', 'blocked_at',
+    'walkthrough_step', 'walkthrough_completed_at', 'walkthrough_skipped_at',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -30,6 +33,9 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'is_blocked' => 'boolean',
             'blocked_at' => 'datetime',
+            'walkthrough_step' => 'integer',
+            'walkthrough_completed_at' => 'datetime',
+            'walkthrough_skipped_at' => 'datetime',
         ];
     }
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\CheckBudgetThresholds;
+use App\Console\Commands\ExpireSubscriptions;
 use App\Console\Commands\GenerateCreditBills;
 use App\Console\Commands\GenerateSavingsBills;
 use App\Console\Commands\RemindDueBills;
@@ -38,5 +39,11 @@ Schedule::command(RemindDueBills::class)
 // (pengecekan realtime tetap jalan lewat job setiap kali transaksi dibuat).
 Schedule::command(CheckBudgetThresholds::class)
     ->dailyAt('07:05')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Menyusulkan status langganan yang sudah lewat tanggal kedaluwarsa.
+Schedule::command(ExpireSubscriptions::class)
+    ->dailyAt('00:10')
     ->withoutOverlapping()
     ->onOneServer();

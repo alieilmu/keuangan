@@ -239,7 +239,13 @@ class BillController extends Controller
         }
 
         if ($categoryId) {
-            EvaluateBudgetThreshold::dispatch((int) $userId, (int) $categoryId, $paidOn->toDateString());
+            // Pemilik transaksi pembayaran adalah user yang menekan Bayar,
+            // sama seperti pencatatan transaksi biasa.
+            EvaluateBudgetThreshold::dispatch(
+                (int) $request->user()->getKey(),
+                (int) $categoryId,
+                $paidOn->toDateString()
+            );
         }
 
         return back()->with('success', 'Tagihan '.$bill->title.' berhasil dibayar.');

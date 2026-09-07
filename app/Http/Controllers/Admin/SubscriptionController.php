@@ -76,7 +76,9 @@ class SubscriptionController extends Controller
         $validated = $request->validate([
             'group_id' => ['required', 'integer', Rule::exists('groups', 'id')],
             'subscription_plan_id' => ['required', 'integer', Rule::exists('subscription_plans', 'id')],
-            'expires_at' => ['nullable', 'date', 'after:today'],
+            // Batas atas mencegah salah ketik tahun (mis. 2714) tersimpan
+            // sebagai langganan yang praktis abadi.
+            'expires_at' => ['nullable', 'date', 'after:today', 'before:2100-01-01'],
         ]);
 
         $plan = SubscriptionPlan::findOrFail($validated['subscription_plan_id']);

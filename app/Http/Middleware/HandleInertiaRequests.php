@@ -62,6 +62,9 @@ class HandleInertiaRequests extends Middleware
             'subscription' => fn () => $this->subscriptionProps($user),
             // Panduan interaktif pengguna baru.
             'walkthrough' => fn () => app(WalkthroughService::class)->present($user),
+            // Grup (kas bersama) + kuota anggotanya, untuk modal
+            // "Tambah Anggota" di menu profil.
+            'group' => fn () => $this->groupProps($user),
         ]);
     }
 
@@ -85,6 +88,36 @@ class HandleInertiaRequests extends Middleware
             'remaining_days' => $subscription->remainingDays(),
             'expired' => $subscription->hasExpired(),
             'expires_label' => $subscription->expires_at?->translatedFormat('d M Y'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function groupProps(?User $user): ?array
+    {
+        $group = $user?->group;
+
+        if ($group === null) {
+            return null;
+        }
+
+        $quota = $group->memberQuota();
+        $members = $group->users()->orderBy('name')->get(['id', 'name', 'email']);
+
+        return [
+            'id' => $group->getKey(),
+            'name' => $group->name,
+            'plan_name' => $group->subscription?->plan?->name,
+            'member_count' => $members->count(),
+            'member_quota' => $quota,
+            'quota_full' => ! $group->hasCapacityFor(),
+            'members' => $members->map(fn (User $member) => [
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'is_self' => $member->is($user),
+            ])->values(),
         ];
     }
 }

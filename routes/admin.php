@@ -26,6 +26,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
     Route::post('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // --- Manajemen Subscription -----------------------------------------
     Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');

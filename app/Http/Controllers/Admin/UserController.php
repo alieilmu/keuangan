@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Document;
+use App\Models\Group;
 use App\Models\User;
+use App\Services\DocumentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -77,6 +81,46 @@ class UserController extends Controller
 
         return back()->with('success', 'Kata sandi baru dibuat.')
             ->with('generated_password', $newPassword);
+    }
+
+    /**
+     * Hapus akun beserta SELURUH data keuangannya.
+     *
+     * Baris turunan (akun dana, transaksi, tagihan, kredit, anggaran,
+     * tabungan, transfer, dokumen) ikut terhapus lewat cascade foreign key.
+     * Berkas dokumen fisik dihapus lebih dulu lewat DocumentService, karena
+     * cascade database hanya membuang barisnya dan akan meninggalkan berkas
+     * yatim di storage.
+     */
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        if ($user->is($request->user())) {
+            return back()->with('error', 'Anda tidak bisa menghapus akun sendiri.');
+        }
+
+        $name = $user->name;
+        $group = $user->group;
+
+        DB::transaction(function () use ($user, $group): void {
+            $documents = app(DocumentService::class);
+
+            foreach (Document::query()->where('user_id', $user->getKey())->get() as $document) {
+                $documents->delete($document);
+            }
+
+            $user->delete();
+
+            // Grup yang kehilangan anggota terakhirnya ikut dibubarkan
+            // bersama langganannya, supaya tidak menumpuk sebagai tenant
+            // kosong di panel admin.
+            if ($group !== null && $group->users()->count() === 0) {
+                $group->subscription()->delete();
+                $group->delete();
+            }
+        });
+
+        return redirect()->route('admin.users.index')
+            ->with('success', "Akun {$name} beserta seluruh datanya telah dihapus.");
     }
 
     /** @return array<string, mixed> */

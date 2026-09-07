@@ -1,14 +1,17 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import NotificationBell from '../Components/NotificationBell.vue';
 import FlashToast from '../Components/FlashToast.vue';
 import WalkthroughPanel from '../Components/WalkthroughPanel.vue';
+import AddMemberModal from '../Components/AddMemberModal.vue';
 import { formatPeriod, currentPeriod } from '../lib/format';
 
 const page = usePage();
 
 const user = computed(() => page.props.auth?.user ?? null);
+const group = computed(() => page.props.group ?? null);
+const showAddMember = ref(false);
 const thisMonth = computed(() => formatPeriod(currentPeriod()));
 
 const NAV = [
@@ -70,6 +73,20 @@ function logout() {
                             <p class="truncate text-xs font-semibold text-slate-800">{{ user?.name }}</p>
                             <p class="truncate text-[11px] text-slate-400">{{ user?.email }}</p>
                         </div>
+                        <button
+                            v-if="group"
+                            type="button"
+                            class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                            @click="showAddMember = true"
+                        >
+                            <span>Tambah Anggota</span>
+                            <span
+                                class="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                                :class="group.quota_full ? 'bg-amber-100 text-amber-700' : 'bg-emerald-50 text-emerald-700'"
+                            >
+                                {{ group.member_count }}{{ group.member_quota === null ? '' : `/${group.member_quota}` }}
+                            </span>
+                        </button>
                         <Link
                             v-if="user?.is_admin"
                             href="/admin"
@@ -129,6 +146,8 @@ function logout() {
                 </Link>
             </div>
         </nav>
+
+        <AddMemberModal :open="showAddMember" @close="showAddMember = false" />
 
         <WalkthroughPanel />
 

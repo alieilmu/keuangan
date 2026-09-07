@@ -8,6 +8,24 @@ defineOptions({ layout: AdminLayout });
 const props = defineProps({ user: Object });
 const page = usePage();
 
+function destroy() {
+    const typed = prompt(
+        `Hapus akun ${props.user.name} beserta SELURUH data keuangannya?\n\n`
+            + `Tindakan ini permanen dan tidak bisa dibatalkan.\n`
+            + `Ketik nama akun untuk mengonfirmasi:`,
+    );
+
+    if (typed !== props.user.name) {
+        if (typed !== null) {
+            alert('Nama tidak cocok. Penghapusan dibatalkan.');
+        }
+
+        return;
+    }
+
+    router.delete(`/admin/users/${props.user.id}`);
+}
+
 function toggleStatus() {
     const verb = props.user.is_blocked ? 'mengaktifkan kembali' : 'memblokir';
 
@@ -55,6 +73,14 @@ function toggleStatus() {
                     @click="toggleStatus"
                 >
                     {{ user.is_blocked ? 'Aktifkan Akun' : 'Blokir Akun' }}
+                </button>
+                <button
+                    v-if="!user.is_admin"
+                    type="button"
+                    class="rounded-xl bg-red-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-red-700"
+                    @click="destroy"
+                >
+                    Hapus Akun
                 </button>
             </div>
         </div>

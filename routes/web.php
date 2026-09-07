@@ -9,6 +9,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SavingsGoalController;
@@ -103,6 +104,9 @@ Route::middleware('auth')->group(function (): void {
         ->name('push-subscriptions.store');
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])
         ->name('push-subscriptions.destroy');
+
+    // --- Anggota grup (kas bersama), dari menu profil -----------------------
+    Route::post('group/members', [GroupMemberController::class, 'store'])->name('group.members.store');
 
     // --- Panduan interaktif pengguna baru ----------------------------------
     Route::post('walkthrough/advance', [WalkthroughController::class, 'advance'])->name('walkthrough.advance');

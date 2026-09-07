@@ -30,6 +30,26 @@ watch(
     },
 );
 
+function destroy(user) {
+    // Konfirmasi berlapis: aksi ini menghapus seluruh data keuangan dan
+    // tidak bisa dibatalkan, jadi pengguna harus mengetik ulang namanya.
+    const typed = prompt(
+        `Hapus akun ${user.name} beserta SELURUH data keuangannya (akun dana, transaksi, tagihan, kredit, dokumen)?\n\n`
+            + `Tindakan ini permanen dan tidak bisa dibatalkan.\n`
+            + `Ketik nama akun untuk mengonfirmasi:`,
+    );
+
+    if (typed !== user.name) {
+        if (typed !== null) {
+            alert('Nama tidak cocok. Penghapusan dibatalkan.');
+        }
+
+        return;
+    }
+
+    router.delete(`/admin/users/${user.id}`, { preserveScroll: true });
+}
+
 function toggleStatus(user) {
     const verb = user.is_blocked ? 'mengaktifkan kembali' : 'memblokir';
 
@@ -120,6 +140,18 @@ function toggleStatus(user) {
                                 @click="toggleStatus(user)"
                             >
                                 {{ user.is_blocked ? 'Aktifkan' : 'Blokir' }}
+                            </button>
+                            <button
+                                v-if="!user.is_admin"
+                                type="button"
+                                class="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                                aria-label="Hapus akun"
+                                title="Hapus akun beserta seluruh datanya"
+                                @click="destroy(user)"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+                                    <path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
                             </button>
                         </div>
                     </div>

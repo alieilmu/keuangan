@@ -13,11 +13,12 @@ defineOptions({ layout: AdminLayout });
 defineProps({
     coupons: Array,
     types: Array,
+    plans: { type: Array, default: () => [] },
 });
 
 const editing = ref(null);
 const open = ref(false);
-const form = useForm({ code: '', description: '', type: 'percent', value: '', max_uses: '', starts_at: '', ends_at: '' });
+const form = useForm({ code: '', description: '', type: 'percent', value: '', max_uses: '', starts_at: '', ends_at: '', plan_ids: [] });
 const inputClass = 'w-full rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200';
 
 function create() {
@@ -38,6 +39,7 @@ function edit(coupon) {
         max_uses: coupon.max_uses ?? '',
         starts_at: coupon.starts_at ?? '',
         ends_at: coupon.ends_at ?? '',
+        plan_ids: [...coupon.plan_ids],
     });
     open.value = true;
 }
@@ -94,6 +96,18 @@ function destroy(coupon) {
                                 {{ coupon.usable ? 'Berlaku' : coupon.is_active ? 'Tidak berlaku' : 'Nonaktif' }}
                             </span>
                         </p>
+                        <div class="mt-1 flex flex-wrap gap-1">
+                            <span v-if="!coupon.plan_names.length" class="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                                Semua paket
+                            </span>
+                            <span
+                                v-for="name in coupon.plan_names"
+                                :key="name"
+                                class="rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700"
+                            >
+                                {{ name }}
+                            </span>
+                        </div>
                         <p class="truncate text-[11px] text-slate-400">
                             {{ coupon.used }}{{ coupon.max_uses ? ` / ${coupon.max_uses}` : '' }} dipakai - {{ coupon.period_label }}
                             <span v-if="coupon.description"> - {{ coupon.description }}</span>
@@ -130,6 +144,23 @@ function destroy(coupon) {
                         <input v-else v-model="form.value" type="number" min="1" max="100" :class="inputClass" />
                     </FormField>
                 </div>
+                <FormField
+                    label="Berlaku untuk paket"
+                    :hint="form.plan_ids.length ? `Hanya ${form.plan_ids.length} paket terpilih` : 'Tidak ada yang dicentang = berlaku untuk semua paket'"
+                    :error="form.errors.plan_ids || form.errors['plan_ids.0']"
+                >
+                    <div class="flex flex-wrap gap-2">
+                        <label
+                            v-for="plan in plans"
+                            :key="plan.id"
+                            class="flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs ring-1 transition"
+                            :class="form.plan_ids.includes(plan.id) ? 'bg-emerald-50 text-emerald-700 ring-emerald-500' : 'bg-white text-slate-600 ring-slate-200'"
+                        >
+                            <input v-model="form.plan_ids" type="checkbox" :value="plan.id" class="size-3.5 accent-emerald-600" />
+                            {{ plan.name }}
+                        </label>
+                    </div>
+                </FormField>
                 <FormField label="Batas pemakaian" hint="Kosongkan untuk tanpa batas" :error="form.errors.max_uses">
                     <input v-model="form.max_uses" type="number" min="1" :class="inputClass" />
                 </FormField>

@@ -249,6 +249,14 @@ class SubscriptionBillingService
                 throw ValidationException::withMessages(['coupon_code' => 'Kode diskon tidak valid atau sudah tidak berlaku.']);
             }
 
+            // Berlaku juga untuk pembelian slot anggota: yang diperiksa adalah
+            // paket langganan grup saat itu.
+            if (! $coupon->appliesToPlan($planId)) {
+                throw ValidationException::withMessages([
+                    'coupon_code' => "Kode {$coupon->code} hanya berlaku untuk paket ".$coupon->plans->pluck('name')->join(', ', ' dan ').'.',
+                ]);
+            }
+
             $discount = $coupon->discountFor($subtotal);
             $lines[] = ['label' => "Kode {$coupon->code} ({$coupon->describe()})", 'amount' => -$discount];
         }

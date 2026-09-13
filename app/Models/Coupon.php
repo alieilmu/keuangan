@@ -6,6 +6,7 @@ use App\Enums\CouponType;
 use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['code', 'description', 'type', 'value', 'max_uses', 'starts_at', 'ends_at', 'is_active'])]
@@ -27,6 +28,23 @@ class Coupon extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(SubscriptionOrder::class);
+    }
+
+    /**
+     * Paket tempat kupon ini boleh dipakai. Kosong = berlaku untuk semua paket.
+     *
+     * @return BelongsToMany<SubscriptionPlan, $this>
+     */
+    public function plans(): BelongsToMany
+    {
+        return $this->belongsToMany(SubscriptionPlan::class, 'coupon_plan');
+    }
+
+    public function appliesToPlan(int $planId): bool
+    {
+        $plans = $this->plans;
+
+        return $plans->isEmpty() || $plans->contains('id', $planId);
     }
 
     /** Pemakaian = pesanan yang masih menunggu atau sudah lunas. */

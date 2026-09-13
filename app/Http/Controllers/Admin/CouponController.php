@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\CouponType;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Models\SubscriptionPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +17,7 @@ class CouponController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Coupons/Index', [
-            'coupons' => Coupon::query()->latest()->get()->map(fn (Coupon $c) => [
+            'coupons' => Coupon::query()->with('plans:id,name')->latest()->get()->map(fn (Coupon $c) => [
                 'id' => $c->id,
                 'code' => $c->code,
                 'description' => $c->description,
@@ -30,7 +31,11 @@ class CouponController extends Controller
                 'period_label' => trim(($c->starts_at?->translatedFormat('d M Y') ?? '').' - '.($c->ends_at?->translatedFormat('d M Y') ?? ''), ' -') ?: 'Tanpa batas waktu',
                 'is_active' => $c->is_active,
                 'usable' => $c->isUsable(),
+                'plan_ids' => $c->plans->pluck('id')->values(),
+                'plan_names' => $c->plans->pluck('name')->values(),
             ])->values(),
+            // Paket Demo tidak dijual, jadi tidak ditawarkan sebagai pilihan.
+            'plans' => SubscriptionPlan::query()->where('code', '!=', 'demo')->orderBy('price')->get(['id', 'name']),
             'types' => collect(CouponType::cases())->map(fn ($t) => ['value' => $t->value, 'label' => $t->label()])->values(),
         ]);
     }
@@ -38,7 +43,11 @@ class CouponController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        Coupon::query()->create($data + ['is_active' => true]);
+        $planIds = $data['plan_ids'] ?? [];
+        unset($data['plan_ids']);
+
+        $coupon = Coupon::query()->create($data + ['is_active' => true]);
+        $coupon->plans()->sync($planIds);
 
         return back()->with('success', "Kode diskon {$data['code']} dibuat.");
     }
@@ -51,7 +60,15 @@ class CouponController extends Controller
             return back()->with('success', "Kode {$coupon->code} ".($coupon->is_active ? 'diaktifkan.' : 'dinonaktifkan.'));
         }
 
-        $coupon->update($this->validated($request, $coupon));
+        $data = $this->validated($request, $coupon);
+        $planIds = $data['plan_ids'] ?? [];
+        unset($data['plan_ids']);
+
+        $coupon->update($data);
+
+        if ($request->has('plan_ids')) {
+            $coupon->plans()->sync($planIds);
+        }
 
         return back()->with('success', "Kode diskon {$coupon->code} diperbarui.");
     }
@@ -83,6 +100,8 @@ class CouponController extends Controller
             'max_uses' => ['nullable', 'integer', 'min:1'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'plan_ids' => ['nullable', 'array'],
+            'plan_ids.*' => ['integer', Rule::exists('subscription_plans', 'id')->where(fn ($q) => $q->where('code', '!=', 'demo'))],
         ], [
             'code.regex' => 'Kode hanya boleh huruf, angka, strip, atau garis bawah.',
             'value.max' => 'Diskon persen maksimal 100.',

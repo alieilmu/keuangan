@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\BillController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -104,6 +106,14 @@ Route::middleware('auth')->group(function (): void {
         ->name('push-subscriptions.store');
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])
         ->name('push-subscriptions.destroy');
+
+    // --- Langganan milik pengguna ------------------------------------------
+    Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::post('billing/orders', [BillingController::class, 'store'])->middleware('throttle:10,1')->name('billing.orders.store');
+    Route::post('billing/orders/{order}/cancel', [BillingController::class, 'cancel'])->name('billing.orders.cancel');
+
+    // --- Saran ke admin, dari menu profil ------------------------------------
+    Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:5,1')->name('feedback.store');
 
     // --- Anggota grup (kas bersama), dari menu profil -----------------------
     Route::post('group/members', [GroupMemberController::class, 'store'])->name('group.members.store');

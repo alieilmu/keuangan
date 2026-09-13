@@ -37,6 +37,12 @@ class DefaultDataProvisioner
 
     public function provision(User $user): void
     {
+        $this->provisionAccounts($user);
+        $this->provisionCategories($user);
+    }
+
+    public function provisionAccounts(User $user): void
+    {
         foreach (self::ACCOUNTS as $account) {
             $user->accounts()->firstOrCreate(
                 ['name' => $account['name']],
@@ -49,7 +55,10 @@ class DefaultDataProvisioner
                 ]
             );
         }
+    }
 
+    public function provisionCategories(User $user): void
+    {
         foreach (self::INCOME_CATEGORIES as $category) {
             $user->categories()->firstOrCreate(
                 ['name' => $category['name'], 'type' => TransactionType::Income->value],

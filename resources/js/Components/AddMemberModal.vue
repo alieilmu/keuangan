@@ -93,8 +93,9 @@ function submit() {
                 v-if="group.quota_full"
                 class="rounded-xl bg-amber-50 px-3 py-2.5 text-[11px] leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-600/20"
             >
-                Kuota paket <strong>{{ group.plan_name }}</strong> sudah penuh. Hubungi admin untuk menaikkan paket
-                sebelum menambah anggota baru.
+                Kuota paket <strong>{{ group.plan_name }}</strong> sudah penuh. Buka menu
+                <a href="/billing" class="font-semibold underline">Langganan</a> untuk upgrade paket atau membeli slot
+                anggota tambahan.
             </p>
 
             <form v-else class="space-y-3 border-t border-slate-100 pt-4" @submit.prevent="submit">

@@ -7,6 +7,7 @@ import Modal from '../../Components/Modal.vue';
 import FormField from '../../Components/FormField.vue';
 import ColorPicker from '../../Components/ColorPicker.vue';
 import { formatRupiah } from '../../lib/format';
+import MoneyInput from '../../Components/MoneyInput.vue';
 
 const props = defineProps({
     accounts: Array,
@@ -199,11 +200,8 @@ function destroy(account) {
             >
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">Rp</span>
-                    <input
-                        v-model="form.opening_balance"
-                        type="number"
-                        step="0.01"
-                        inputmode="decimal"
+                    <MoneyInput
+                        v-model="form.opening_balance" allow-negative
                         class="w-full rounded-xl border-0 py-2.5 pl-9 pr-3 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                     />
                 </div>

@@ -53,9 +53,22 @@ class SubscriptionController extends Controller
 
         return Inertia::render('Admin/Subscriptions/Index', [
             'subscriptions' => $subscriptions->concat($withoutSubscription)->values(),
-            'plans' => SubscriptionPlan::query()->orderBy('price')->get(
-                ['id', 'code', 'name', 'price', 'max_members', 'is_active']
-            ),
+            'plans' => SubscriptionPlan::query()->with('prices')->orderBy('price')->get()
+                ->map(fn (SubscriptionPlan $plan) => [
+                    'id' => $plan->id,
+                    'code' => $plan->code,
+                    'name' => $plan->name,
+                    'price' => $plan->price,
+                    'max_members' => $plan->max_members,
+                    'extra_member_price' => $plan->extra_member_price,
+                    'is_active' => $plan->is_active,
+                    'prices' => $plan->prices->map(fn ($price) => [
+                        'id' => $price->id,
+                        'months' => $price->months,
+                        'price' => $price->price,
+                        'is_active' => $price->is_active,
+                    ])->values(),
+                ])->values(),
             'groups' => Group::query()->orderBy('name')->get(['id', 'name']),
             // Kandidat yang bisa ditambahkan sebagai anggota grup: belum
             // tergabung grup mana pun dan bukan akun admin.
@@ -121,6 +134,7 @@ class SubscriptionController extends Controller
             'members' => $group?->users->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name]) ?? collect(),
             'member_count' => $group?->users->count() ?? 0,
             'member_quota' => $group?->memberQuota(),
+            'extra_members' => $subscription->extra_members,
             'quota_full' => $group ? ! $group->hasCapacityFor() : false,
             'plan_code' => $subscription->plan?->code,
             'plan_name' => $subscription->plan?->name,

@@ -24,11 +24,19 @@ class BusinessAnalyticsService
      */
     public function mrr(): int
     {
-        return (int) Subscription::query()
-            ->join('subscription_plans', 'subscription_plans.id', '=', 'subscriptions.subscription_plan_id')
-            ->where('subscriptions.status', SubscriptionStatus::Active->value)
-            ->where(fn ($q) => $q->whereNull('subscriptions.expires_at')->orWhere('subscriptions.expires_at', '>', now()))
-            ->sum('subscription_plans.price');
+        // Paket berdurasi (3/6/12 bulan) dinormalkan ke nilai per bulan,
+        // termasuk slot anggota tambahan -- lihat Subscription::monthlyValue().
+        return (int) round($this->activeSubscriptions()->sum(fn (Subscription $s) => $s->monthlyValue()));
+    }
+
+    /** @return \Illuminate\Support\Collection<int, Subscription> */
+    private function activeSubscriptions(): \Illuminate\Support\Collection
+    {
+        return Subscription::query()
+            ->with('plan')
+            ->where('status', SubscriptionStatus::Active->value)
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->get();
     }
 
     /**
@@ -110,10 +118,8 @@ class BusinessAnalyticsService
             'churn_rate' => $this->churnRate(),
             'total_users' => User::query()->count(),
             'total_tenants' => Group::query()->count(),
-            'paying_tenants' => Subscription::query()
-                ->join('subscription_plans', 'subscription_plans.id', '=', 'subscriptions.subscription_plan_id')
-                ->where('subscription_plans.price', '>', 0)
-                ->where('subscriptions.status', SubscriptionStatus::Active->value)
+            'paying_tenants' => $this->activeSubscriptions()
+                ->filter(fn (Subscription $s) => $s->monthlyValue() > 0)
                 ->count(),
         ];
     }

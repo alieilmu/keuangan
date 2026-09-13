@@ -9,6 +9,7 @@ import BudgetProgress from '../../Components/BudgetProgress.vue';
 import PeriodSwitcher from '../../Components/PeriodSwitcher.vue';
 import { budgetStyle } from '../../lib/budget';
 import { formatPercent, formatRupiah } from '../../lib/format';
+import MoneyInput from '../../Components/MoneyInput.vue';
 
 const props = defineProps({
     budgets: Array,
@@ -217,12 +218,8 @@ function copyPrevious() {
             <FormField label="Limit per bulan" required :error="form.errors.limit_amount">
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">Rp</span>
-                    <input
+                    <MoneyInput
                         v-model="form.limit_amount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        inputmode="decimal"
                         class="w-full rounded-xl border-0 py-2.5 pl-9 pr-3 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                     />
                 </div>

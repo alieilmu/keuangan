@@ -5,6 +5,7 @@ import NotificationBell from '../Components/NotificationBell.vue';
 import FlashToast from '../Components/FlashToast.vue';
 import WalkthroughPanel from '../Components/WalkthroughPanel.vue';
 import AddMemberModal from '../Components/AddMemberModal.vue';
+import FeedbackModal from '../Components/FeedbackModal.vue';
 import { formatPeriod, currentPeriod } from '../lib/format';
 
 const page = usePage();
@@ -12,6 +13,8 @@ const page = usePage();
 const user = computed(() => page.props.auth?.user ?? null);
 const group = computed(() => page.props.group ?? null);
 const showAddMember = ref(false);
+const showFeedback = ref(false);
+const subscription = computed(() => page.props.subscription ?? null);
 const thisMonth = computed(() => formatPeriod(currentPeriod()));
 
 const NAV = [
@@ -88,6 +91,27 @@ function logout() {
                             </span>
                         </button>
                         <Link
+                            v-if="group"
+                            href="/billing"
+                            class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                        >
+                            <span>Langganan</span>
+                            <span
+                                v-if="subscription"
+                                class="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                                :class="subscription.expired || subscription.is_demo ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'"
+                            >
+                                {{ subscription.plan_name }}
+                            </span>
+                        </Link>
+                        <button
+                            type="button"
+                            class="w-full rounded-lg px-2.5 py-2 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                            @click="showFeedback = true"
+                        >
+                            Kirim Saran
+                        </button>
+                        <Link
                             v-if="user?.is_admin"
                             href="/admin"
                             class="block w-full rounded-lg px-2.5 py-2 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-100"
@@ -148,6 +172,7 @@ function logout() {
         </nav>
 
         <AddMemberModal :open="showAddMember" @close="showAddMember = false" />
+        <FeedbackModal :open="showFeedback" @close="showFeedback = false" />
 
         <WalkthroughPanel />
 

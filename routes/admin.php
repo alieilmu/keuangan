@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\GroupController;
+use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PaymentSimulationController;
 use App\Http\Controllers\Admin\SubscriptionController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
@@ -33,7 +36,26 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('subscriptions', [SubscriptionController::class, 'update'])->name('subscriptions.update');
 
     // --- Katalog paket: kuota anggota & harga -----------------------------
+    Route::post('plans', [SubscriptionPlanController::class, 'store'])->name('plans.store');
     Route::put('plans/{plan}', [SubscriptionPlanController::class, 'update'])->name('plans.update');
+    Route::post('plans/{plan}/prices', [SubscriptionPlanController::class, 'storePrice'])->name('plans.prices.store');
+    Route::put('plan-prices/{price}', [SubscriptionPlanController::class, 'updatePrice'])->name('plan-prices.update');
+    Route::delete('plan-prices/{price}', [SubscriptionPlanController::class, 'destroyPrice'])->name('plan-prices.destroy');
+
+    // --- Pesanan langganan (konfirmasi pembayaran) ---------------------------
+    Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::post('orders/{order}/confirm', [OrderController::class, 'confirm'])->name('orders.confirm');
+    Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+
+    // --- Kode diskon ---------------------------------------------------------
+    Route::get('coupons', [CouponController::class, 'index'])->name('coupons.index');
+    Route::post('coupons', [CouponController::class, 'store'])->name('coupons.store');
+    Route::put('coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
+    Route::delete('coupons/{coupon}', [CouponController::class, 'destroy'])->name('coupons.destroy');
+
+    // --- Saran pengguna ------------------------------------------------------
+    Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
+    Route::put('feedback/{feedback}', [FeedbackController::class, 'update'])->name('feedback.update');
 
     // --- Keanggotaan grup/keluarga (ditegakkan sesuai kuota paket) --------
     Route::post('groups/{group}/members', [GroupController::class, 'addMember'])->name('groups.members.add');

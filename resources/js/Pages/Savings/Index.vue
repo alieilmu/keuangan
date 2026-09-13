@@ -7,6 +7,7 @@ import Modal from '../../Components/Modal.vue';
 import FormField from '../../Components/FormField.vue';
 import SavingsProgress from '../../Components/SavingsProgress.vue';
 import { formatRupiah, todayIso } from '../../lib/format';
+import MoneyInput from '../../Components/MoneyInput.vue';
 
 const props = defineProps({
     goals: Array,
@@ -197,21 +198,15 @@ function statusTone(goal) {
 
             <div class="grid grid-cols-2 gap-3">
                 <FormField label="Target dana" required :error="form.errors.target_amount">
-                    <input
+                    <MoneyInput
                         v-model="form.target_amount"
-                        type="number"
-                        min="1"
-                        step="0.01"
                         class="w-full rounded-xl border-0 px-3 py-2.5 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                     />
                 </FormField>
 
                 <FormField label="Setoran / bulan" required :error="form.errors.monthly_contribution">
-                    <input
+                    <MoneyInput
                         v-model="form.monthly_contribution"
-                        type="number"
-                        min="1"
-                        step="0.01"
                         class="w-full rounded-xl border-0 px-3 py-2.5 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                     />
                 </FormField>

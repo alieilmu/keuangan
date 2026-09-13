@@ -1,11 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 import Card from '../../../Components/Card.vue';
 import Modal from '../../../Components/Modal.vue';
 import FormField from '../../../Components/FormField.vue';
 import EmptyState from '../../../Components/EmptyState.vue';
+import MoneyInput from '../../../Components/MoneyInput.vue';
 import { formatRupiah } from '../../../lib/format';
 
 defineOptions({ layout: AdminLayout });
@@ -50,21 +51,93 @@ function toneFor(status) {
  * Katalog paket: kuota anggota & harga
  * ------------------------------------------------------------------- */
 const editingPlan = ref(null);
-const planForm = useForm({ name: '', price: 0, max_members: '' });
+const creatingPlan = ref(false);
+const planForm = useForm({ name: '', price: 0, max_members: '', extra_member_price: 0 });
 
 function editPlan(plan) {
+    creatingPlan.value = false;
     editingPlan.value = plan;
     planForm.clearErrors();
     planForm.name = plan.name;
     planForm.price = plan.price;
     planForm.max_members = plan.max_members ?? '';
+    planForm.extra_member_price = plan.extra_member_price ?? 0;
+}
+
+function createPlan() {
+    editingPlan.value = null;
+    planForm.reset();
+    planForm.clearErrors();
+    creatingPlan.value = true;
 }
 
 function submitPlan() {
-    planForm.transform((data) => ({ ...data, max_members: data.max_members === '' ? null : data.max_members })).put(
-        `/admin/plans/${editingPlan.value.id}`,
-        { preserveScroll: true, onSuccess: () => (editingPlan.value = null) },
+    const payload = (data) => ({
+        ...data,
+        price: Number(data.price) || 0,
+        extra_member_price: Number(data.extra_member_price) || 0,
+        max_members: data.max_members === '' ? null : data.max_members,
+    });
+    const options = {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingPlan.value = null;
+            creatingPlan.value = false;
+        },
+    };
+
+    if (creatingPlan.value) {
+        planForm.transform(payload).post('/admin/plans', options);
+    } else {
+        planForm.transform(payload).put(`/admin/plans/${editingPlan.value.id}`, options);
+    }
+}
+
+/* ---------------------------------------------------------------------
+ * Opsi durasi per paket (1/3/6/12 bulan ...)
+ * ------------------------------------------------------------------- */
+const pricingPlanId = ref(null);
+const pricingPlan = computed(() => props.plans.find((p) => p.id === pricingPlanId.value) ?? null);
+const priceEdits = reactive({});
+const newPriceForm = useForm({ months: 3, price: '' });
+const DURATIONS = [1, 3, 6, 12];
+
+function managePrices(plan) {
+    pricingPlanId.value = plan.id;
+    newPriceForm.reset();
+    newPriceForm.clearErrors();
+    Object.keys(priceEdits).forEach((key) => delete priceEdits[key]);
+    plan.prices.forEach((price) => (priceEdits[price.id] = price.price));
+    newPriceForm.months = DURATIONS.find((m) => !plan.prices.some((p) => p.months === m)) ?? 3;
+}
+
+function savePrice(price, isActive = price.is_active) {
+    router.put(
+        `/admin/plan-prices/${price.id}`,
+        { price: Number(priceEdits[price.id]) || price.price, is_active: isActive },
+        { preserveScroll: true },
     );
+}
+
+function deletePrice(price) {
+    if (!confirm(`Hapus opsi ${price.months} bulan?`)) {
+        return;
+    }
+
+    router.delete(`/admin/plan-prices/${price.id}`, {
+        preserveScroll: true,
+        onSuccess: () => delete priceEdits[price.id],
+    });
+}
+
+function addPrice() {
+    newPriceForm.post(`/admin/plans/${pricingPlanId.value}/prices`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            pricingPlan.value?.prices.forEach((price) => (priceEdits[price.id] ??= price.price));
+            newPriceForm.reset('price');
+        },
+    });
 }
 
 /* ---------------------------------------------------------------------
@@ -121,7 +194,16 @@ function quotaTone(sub) {
         </div>
 
         <!-- Katalog paket -->
-        <Card title="Katalog Paket" subtitle="Kuota anggota & harga berlaku untuk semua grup pada paket tersebut">
+        <Card title="Katalog Paket" subtitle="Kuota anggota, harga, dan opsi durasi yang bisa dibeli pengguna">
+            <template #actions>
+                <button
+                    type="button"
+                    class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                    @click="createPlan"
+                >
+                    + Paket Baru
+                </button>
+            </template>
             <ul class="divide-y divide-slate-100">
                 <li v-for="plan in plans" :key="plan.id" class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                     <div class="min-w-0">
@@ -132,15 +214,37 @@ function quotaTone(sub) {
                         <p class="text-xs text-slate-400">
                             {{ plan.price > 0 ? formatRupiah(plan.price) + '/bulan' : 'Gratis' }}
                             - kuota {{ plan.max_members === null ? 'tanpa batas' : `${plan.max_members} anggota` }}
+                            <span v-if="plan.extra_member_price"> - slot tambahan {{ formatRupiah(plan.extra_member_price) }}/bln</span>
                         </p>
+                        <div v-if="plan.prices.length" class="mt-1.5 flex flex-wrap gap-1">
+                            <span
+                                v-for="price in plan.prices"
+                                :key="price.id"
+                                class="rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+                                :class="price.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400 line-through'"
+                            >
+                                {{ price.months }} bln - {{ formatRupiah(price.price) }}
+                            </span>
+                        </div>
+                        <p v-else-if="plan.code !== 'demo'" class="mt-1 text-[10px] text-amber-600">Belum ada opsi durasi, paket tidak bisa dibeli.</p>
                     </div>
-                    <button
-                        type="button"
-                        class="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
-                        @click="editPlan(plan)"
-                    >
-                        Ubah Kuota
-                    </button>
+                    <div class="flex shrink-0 gap-1.5">
+                        <button
+                            v-if="plan.code !== 'demo'"
+                            type="button"
+                            class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
+                            @click="managePrices(plan)"
+                        >
+                            Durasi &amp; Harga
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
+                            @click="editPlan(plan)"
+                        >
+                            Ubah Kuota
+                        </button>
+                    </div>
                 </li>
             </ul>
         </Card>
@@ -238,22 +342,90 @@ function quotaTone(sub) {
         </Modal>
 
         <!-- Modal: ubah kuota paket -->
-        <Modal :open="!!editingPlan" title="Ubah Kuota Paket" @close="editingPlan = null">
+        <Modal
+            :open="!!editingPlan || creatingPlan"
+            :title="creatingPlan ? 'Paket Baru' : 'Ubah Kuota Paket'"
+            @close="editingPlan = null; creatingPlan = false"
+        >
             <form class="space-y-4" @submit.prevent="submitPlan">
                 <FormField label="Nama Paket" :error="planForm.errors.name">
                     <input v-model="planForm.name" type="text" class="w-full rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200" />
                 </FormField>
                 <FormField label="Harga per Bulan (Rp)" :error="planForm.errors.price">
-                    <input v-model.number="planForm.price" type="number" min="0" step="1000" class="w-full rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200" />
+                    <MoneyInput v-model="planForm.price" placeholder="0" class="w-full rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200" />
                 </FormField>
                 <FormField label="Kuota Anggota" hint="Kosongkan untuk tanpa batas" :error="planForm.errors.max_members">
                     <input v-model="planForm.max_members" type="number" min="1" placeholder="Tanpa batas" class="w-full rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200" />
                 </FormField>
+                <FormField
+                    label="Harga slot anggota tambahan (Rp/anggota/bulan)"
+                    hint="0 = slot tambahan tidak dijual. Hanya berlaku untuk paket berkuota."
+                    :error="planForm.errors.extra_member_price"
+                >
+                    <MoneyInput v-model="planForm.extra_member_price" placeholder="0" class="w-full rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200" />
+                </FormField>
+                <p v-if="creatingPlan" class="text-[11px] text-slate-500">
+                    Paket berbayar otomatis mendapat opsi durasi 1 bulan. Tambahkan durasi lain lewat tombol "Durasi &amp; Harga".
+                </p>
                 <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" class="rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-500" @click="editingPlan = null">Batal</button>
+                    <button type="button" class="rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-500" @click="editingPlan = null; creatingPlan = false">Batal</button>
                     <button type="submit" class="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700" :disabled="planForm.processing">Simpan</button>
                 </div>
             </form>
+        </Modal>
+
+        <!-- Modal: opsi durasi & harga -->
+        <Modal :open="!!pricingPlan" :title="`Durasi & Harga - ${pricingPlan?.name ?? ''}`" @close="pricingPlanId = null">
+            <div v-if="pricingPlan" class="space-y-4">
+                <p class="text-xs text-slate-500">
+                    Harga adalah total yang dibayar untuk seluruh durasi. Contoh: 12 bulan Rp500.000 berarti sekitar
+                    Rp41.667 per bulan.
+                </p>
+                <ul class="space-y-2">
+                    <li v-for="price in pricingPlan.prices" :key="price.id" class="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                        <span class="w-16 text-xs font-semibold text-slate-700">{{ price.months }} bulan</span>
+                        <MoneyInput
+                            v-model="priceEdits[price.id]"
+                            class="min-w-0 flex-1 rounded-lg border-0 bg-white px-2.5 py-1.5 text-sm ring-1 ring-slate-200"
+                        />
+                        <span class="text-[10px] text-slate-400">{{ formatRupiah(Math.round((Number(priceEdits[price.id]) || 0) / price.months)) }}/bln</span>
+                        <div class="flex gap-1">
+                            <button type="button" class="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700" @click="savePrice(price)">Simpan</button>
+                            <button
+                                type="button"
+                                class="rounded-lg bg-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-300"
+                                @click="savePrice(price, !price.is_active)"
+                            >
+                                {{ price.is_active ? 'Sembunyikan' : 'Tampilkan' }}
+                            </button>
+                            <button type="button" class="rounded-lg px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50" @click="deletePrice(price)">Hapus</button>
+                        </div>
+                    </li>
+                    <li v-if="!pricingPlan.prices.length" class="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-400">Belum ada opsi durasi.</li>
+                </ul>
+
+                <form class="space-y-2 border-t border-slate-100 pt-4" @submit.prevent="addPrice">
+                    <p class="text-xs font-medium text-slate-600">Tambah opsi durasi</p>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <select v-model.number="newPriceForm.months" class="rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200">
+                            <option v-for="m in [1, 3, 6, 12, 24]" :key="m" :value="m" :disabled="pricingPlan.prices.some((p) => p.months === m)">
+                                {{ m }} bulan
+                            </option>
+                        </select>
+                        <MoneyInput
+                            v-model="newPriceForm.price"
+                            placeholder="Harga total"
+                            class="min-w-0 flex-1 rounded-xl border-0 bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200"
+                        />
+                        <button type="submit" class="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700" :disabled="newPriceForm.processing">
+                            Tambah
+                        </button>
+                    </div>
+                    <p v-if="newPriceForm.errors.months || newPriceForm.errors.price" class="text-xs text-red-600">
+                        {{ newPriceForm.errors.months || newPriceForm.errors.price }}
+                    </p>
+                </form>
+            </div>
         </Modal>
 
         <!-- Modal: kelola anggota -->

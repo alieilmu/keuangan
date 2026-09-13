@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'group_id', 'subscription_plan_id', 'status',
     'started_at', 'expires_at', 'canceled_at', 'changed_by',
+    'billing_months', 'amount', 'extra_members',
 ])]
 class Subscription extends Model
 {
@@ -21,6 +22,9 @@ class Subscription extends Model
             'started_at' => 'datetime',
             'expires_at' => 'datetime',
             'canceled_at' => 'datetime',
+            'billing_months' => 'integer',
+            'amount' => 'integer',
+            'extra_members' => 'integer',
         ];
     }
 
@@ -60,6 +64,22 @@ class Subscription extends Model
         }
 
         return $this->expires_at === null || $this->expires_at->isFuture();
+    }
+
+    /**
+     * Nilai langganan per bulan, dasar perhitungan MRR. Baris yang dibuat
+     * lewat pesanan menyimpan amount (sudah termasuk diskon & slot anggota)
+     * untuk satu periode billing_months. Baris lama tanpa amount jatuh ke
+     * harga dasar paket -- sama persis dengan perhitungan MRR sebelumnya.
+     */
+    public function monthlyValue(): float
+    {
+        if ($this->amount !== null && $this->billing_months > 0) {
+            return $this->amount / $this->billing_months;
+        }
+
+        return (float) ($this->plan?->price ?? 0)
+            + (int) $this->extra_members * (int) ($this->plan?->extra_member_price ?? 0);
     }
 
     public function isDemo(): bool

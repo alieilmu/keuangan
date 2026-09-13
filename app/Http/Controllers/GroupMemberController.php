@@ -40,7 +40,7 @@ class GroupMemberController extends Controller
 
             return back()->with(
                 'error',
-                "Kuota paket {$planName} sudah penuh ({$quota} anggota). Hubungi admin untuk menaikkan paket."
+                "Kuota paket {$planName} sudah penuh ({$quota} anggota). Buka menu Langganan untuk upgrade paket atau membeli slot anggota tambahan."
             );
         }
 
@@ -55,10 +55,14 @@ class GroupMemberController extends Controller
 
             $member->update(['group_id' => $group->getKey()]);
 
-            // Anggota baru langsung punya akun dana & kategori bawaan.
-            // Panduan interaktif TIDAK dinyalakan: ia bergabung ke kas yang
-            // sudah berjalan, bukan memulai dari nol seperti pendaftar baru.
-            $this->provisioner->provision($member);
+            // Anggota baru hanya dibuatkan akun dana bawaan. Kategori TIDAK
+            // dibuat: seluruh kategori milik anggota grup sudah terlihat dan
+            // bisa dipakai lintas anggota (scoping visibleUserIds), sehingga
+            // kategori bawaan baru hanya memunculkan nama ganda di setiap
+            // dropdown -- "Makanan", "Makanan", dan seterusnya.
+            // Panduan interaktif juga tidak dinyalakan: ia bergabung ke kas
+            // yang sudah berjalan, bukan memulai dari nol.
+            $this->provisioner->provisionAccounts($member);
         });
 
         return back()->with('success', "{$data['name']} berhasil ditambahkan ke {$group->name}.");

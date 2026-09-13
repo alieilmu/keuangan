@@ -4,6 +4,7 @@ import { useForm } from '@inertiajs/vue3';
 import Modal from './Modal.vue';
 import FormField from './FormField.vue';
 import { formatRupiah, todayIso } from '../lib/format';
+import MoneyInput from './MoneyInput.vue';
 
 const props = defineProps({
     open: { type: Boolean, default: false },
@@ -131,11 +132,8 @@ function submit() {
                     <span class="pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-xs text-slate-400">
                         Rp
                     </span>
-                    <input
+                    <MoneyInput
                         v-model="form.amount"
-                        type="number"
-                        min="1"
-                        step="0.01"
                         class="w-full rounded-xl border-0 py-2.5 pl-9 pr-3 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                     />
                 </div>

@@ -23,6 +23,12 @@ class Group extends Model
         return $this->hasMany(User::class);
     }
 
+    /** @return HasMany<SubscriptionOrder, $this> */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(SubscriptionOrder::class);
+    }
+
     /** @return HasOne<Subscription, $this> */
     public function subscription(): HasOne
     {
@@ -35,7 +41,11 @@ class Group extends Model
      */
     public function memberQuota(): ?int
     {
-        return $this->subscription?->plan?->max_members;
+        $subscription = $this->subscription;
+        $max = $subscription?->plan?->max_members;
+
+        // Slot anggota yang dibeli terpisah menambah kuota paket berbatas.
+        return $max === null ? null : $max + (int) $subscription->extra_members;
     }
 
     /** Null = tanpa batas. */

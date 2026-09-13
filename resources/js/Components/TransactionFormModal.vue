@@ -4,6 +4,7 @@ import { useForm } from '@inertiajs/vue3';
 import Modal from './Modal.vue';
 import FormField from './FormField.vue';
 import { todayIso } from '../lib/format';
+import MoneyInput from './MoneyInput.vue';
 
 const props = defineProps({
     open: { type: Boolean, default: false },
@@ -106,12 +107,8 @@ function submit() {
             <FormField label="Nominal" required :error="form.errors.amount">
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">Rp</span>
-                    <input
+                    <MoneyInput
                         v-model="form.amount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        inputmode="decimal"
                         placeholder="0"
                         class="w-full rounded-xl border-0 py-2.5 pl-9 pr-3 text-sm tabular-nums ring-1 ring-slate-200 transition placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500"
                     />

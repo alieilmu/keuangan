@@ -7,6 +7,7 @@ import Modal from '../../Components/Modal.vue';
 import FormField from '../../Components/FormField.vue';
 import CreditProgress from '../../Components/CreditProgress.vue';
 import { formatRupiah, formatDate, todayIso } from '../../lib/format';
+import MoneyInput from '../../Components/MoneyInput.vue';
 
 const props = defineProps({
     credits: Array,
@@ -257,11 +258,8 @@ function statusTone(credit) {
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <FormField label="Total pokok pinjaman" required :error="form.errors.total_amount">
-                    <input
+                    <MoneyInput
                         v-model="form.total_amount"
-                        type="number"
-                        min="0"
-                        step="0.01"
                         class="w-full rounded-xl border-0 px-3 py-2.5 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                     />
                 </FormField>
@@ -279,11 +277,8 @@ function statusTone(credit) {
             </div>
 
             <FormField label="Cicilan per bulan" required :error="form.errors.monthly_installment">
-                <input
+                <MoneyInput
                     v-model="form.monthly_installment"
-                    type="number"
-                    min="0"
-                    step="0.01"
                     class="w-full rounded-xl border-0 px-3 py-2.5 text-sm tabular-nums ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500"
                 />
             </FormField>

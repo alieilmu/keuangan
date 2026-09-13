@@ -19,6 +19,9 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    /** @var array<int|string, array<int, int>> Cache visibleUserIds() per group_id. */
+    private array $visibleUserIdsCache = [];
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasPushSubscriptions, Notifiable;
 
@@ -61,7 +64,12 @@ class User extends Authenticatable
             return [(int) $this->getKey()];
         }
 
-        return static::query()
+        // Dipanggil di hampir setiap query yang menyaring data per grup --
+        // tanpa cache, satu halaman dashboard menjalankan query yang sama
+        // enam kali. Hasilnya disimpan per group_id selama umur objek ini
+        // (satu request web / satu job antrean), sehingga bila group_id
+        // berubah di tengah jalan, kuncinya ikut berubah dan dihitung ulang.
+        return $this->visibleUserIdsCache[$this->group_id] ??= static::query()
             ->where('group_id', $this->group_id)
             ->orderBy('id')
             ->pluck('id')

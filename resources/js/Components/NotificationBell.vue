@@ -8,10 +8,40 @@ const open = ref(false);
 
 const push = usePushNotifications();
 
-const notifications = computed(() => page.props.notifications ?? { unread: 0, items: [] });
+const notifications = computed(() => page.props.notifications ?? { unread: 0 });
+
+// Daftar notifikasi adalah prop opsional di server: tidak ikut di setiap
+// perpindahan halaman, baru diminta lewat partial reload saat lonceng dibuka.
+const items = computed(() => page.props.notification_items ?? []);
+const loaded = computed(() => page.props.notification_items !== undefined);
+const loading = ref(false);
+
+function loadItems() {
+    loading.value = true;
+    router.reload({ only: ['notification_items'], onFinish: () => (loading.value = false) });
+}
+
+function toggle() {
+    open.value = !open.value;
+
+    if (open.value && !loaded.value) {
+        loadItems();
+    }
+}
 
 function markAllAsRead() {
-    router.post('/notifications/read-all', {}, { preserveScroll: true, preserveState: true });
+    router.post(
+        '/notifications/read-all',
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+            // Respons penuh setelah redirect tidak membawa prop opsional,
+            // jadi daftarnya diminta ulang supaya dropdown yang masih
+            // terbuka tidak mendadak kosong.
+            onSuccess: () => loadItems(),
+        },
+    );
 }
 
 function openNotification(notification) {
@@ -38,7 +68,7 @@ function openNotification(notification) {
             type="button"
             class="relative grid size-9 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
             aria-label="Notifikasi"
-            @click="open = !open"
+            @click="toggle"
         >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5">
                 <path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7" stroke-linecap="round" stroke-linejoin="round" />
@@ -103,11 +133,15 @@ function openNotification(notification) {
             </div>
 
             <ul class="max-h-80 divide-y divide-slate-100 overflow-y-auto">
-                <li v-if="!notifications.items.length" class="px-4 py-8 text-center text-xs text-slate-400">
+                <li v-if="loading && !loaded" class="px-4 py-8 text-center text-xs text-slate-400">
+                    Memuat notifikasi...
+                </li>
+
+                <li v-else-if="!items.length" class="px-4 py-8 text-center text-xs text-slate-400">
                     Belum ada notifikasi.
                 </li>
 
-                <li v-for="notification in notifications.items" :key="notification.id">
+                <li v-for="notification in items" :key="notification.id">
                     <button
                         type="button"
                         class="block w-full px-4 py-3 text-left transition hover:bg-slate-50"

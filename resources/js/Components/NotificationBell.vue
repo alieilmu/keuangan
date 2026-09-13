@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { usePushNotifications } from '../composables/usePushNotifications';
 
@@ -7,6 +7,20 @@ const page = usePage();
 const open = ref(false);
 
 const push = usePushNotifications();
+const root = ref(null);
+
+// Tutup dropdown saat mengetuk di luar lonceng. Sebelumnya memakai overlay
+// `fixed inset-0` di dalam header, tetapi header memakai backdrop-blur yang
+// menjadikannya containing block bagi elemen fixed -- overlay itu hanya
+// menutupi area header, sehingga ketukan di konten halaman tidak menutupnya.
+function onPointerDown(event) {
+    if (open.value && root.value && !root.value.contains(event.target)) {
+        open.value = false;
+    }
+}
+
+onMounted(() => document.addEventListener('pointerdown', onPointerDown));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown));
 
 const notifications = computed(() => page.props.notifications ?? { unread: 0 });
 
@@ -63,7 +77,7 @@ function openNotification(notification) {
 </script>
 
 <template>
-    <div class="relative">
+    <div ref="root" class="relative">
         <button
             type="button"
             class="relative grid size-9 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
@@ -83,11 +97,16 @@ function openNotification(notification) {
             </span>
         </button>
 
-        <div v-if="open" class="fixed inset-0 z-30" @click="open = false" />
-
+        <!--
+            Di ponsel panel dibentangkan selebar layar tepat di bawah header.
+            Sebelumnya panel menempel ke tepi kanan tombol lonceng; karena di
+            kanan lonceng masih ada avatar, panel selebar 21rem terdorong
+            keluar dari sisi kiri layar. Mulai breakpoint sm, panel kembali
+            menempel ke lonceng seperti semula.
+        -->
         <div
             v-if="open"
-            class="absolute right-0 z-40 mt-2 w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200"
+            class="fixed inset-x-3 top-[4.5rem] z-40 overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[21rem]"
         >
             <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                 <p class="text-sm font-semibold text-slate-900">Notifikasi</p>
@@ -154,7 +173,7 @@ function openNotification(notification) {
                                 :class="notification.read_at ? 'bg-slate-300' : 'bg-emerald-500'"
                             />
                             <div class="min-w-0">
-                                <p class="truncate text-xs font-semibold text-slate-800">
+                                <p class="line-clamp-2 text-xs font-semibold text-slate-800">
                                     {{ notification.data.title }}
                                 </p>
                                 <p class="mt-0.5 line-clamp-2 text-[11px] text-slate-500">

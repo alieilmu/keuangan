@@ -22,15 +22,20 @@ class TransactionTemplateExport implements Export, WithMultipleSheets
      */
     public function sheets(): array
     {
+        // Seluruh akun & kategori grup, sama dengan yang dikenali saat import.
         $accounts = Account::query()
-            ->where('user_id', $this->user->getKey())
+            ->whereIn('user_id', $this->user->visibleUserIds())
             ->orderBy('name')
-            ->pluck('name');
+            ->pluck('name')
+            ->unique()
+            ->values();
 
         $categories = Category::query()
-            ->where('user_id', $this->user->getKey())
+            ->whereIn('user_id', $this->user->visibleUserIds())
             ->orderBy('name')
-            ->get(['name', 'type']);
+            ->get(['name', 'type'])
+            ->unique(fn (Category $c) => $c->type->value.'|'.mb_strtolower($c->name))
+            ->values();
 
         $sampleAccount = $accounts->first() ?? 'Dompet Tunai';
         $sampleExpense = $categories->firstWhere('type.value', 'expense')?->name ?? 'Makanan';

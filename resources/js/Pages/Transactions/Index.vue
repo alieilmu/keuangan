@@ -80,7 +80,44 @@ function destroy(transaction) {
     router.delete(`/transactions/${transaction.id}`, { preserveScroll: true });
 }
 
-const importForm = useForm({ file: null });
+const importForm = useForm({ file: null, skip_duplicates: true });
+
+/* ---------------------------------------------------------------------
+ * Import dua langkah: periksa (pratinjau tabel) -> import baris valid
+ * ------------------------------------------------------------------- */
+const importPreview = ref(null);
+const previewFilter = ref('all');
+const previewPage = ref(1);
+const PREVIEW_PAGE_SIZE = 100;
+
+const previewSummary = computed(() => importPreview.value?.summary ?? null);
+
+const previewRows = computed(() => {
+    const rows = importPreview.value?.rows ?? [];
+
+    if (previewFilter.value === 'errors') {
+        return rows.filter((row) => row.errors.length);
+    }
+
+    if (previewFilter.value === 'duplicates') {
+        return rows.filter((row) => row.duplicate);
+    }
+
+    return rows;
+});
+
+const previewPageCount = computed(() => Math.max(1, Math.ceil(previewRows.value.length / PREVIEW_PAGE_SIZE)));
+const pagedPreviewRows = computed(() =>
+    previewRows.value.slice((previewPage.value - 1) * PREVIEW_PAGE_SIZE, previewPage.value * PREVIEW_PAGE_SIZE),
+);
+
+watch(previewFilter, () => (previewPage.value = 1));
+
+const importableCount = computed(() => {
+    const summary = previewSummary.value;
+
+    return summary ? summary.valid - (importForm.skip_duplicates ? summary.duplicates : 0) : 0;
+});
 
 // Pemasukan & transfer masuk menambah saldo, sisanya mengurangi.
 const PLUS_TYPES = ['income', 'transfer_in'];
@@ -105,15 +142,47 @@ function cancelTransfer(transfer) {
     router.delete(`/transfers/${transfer.id}`, { preserveScroll: true });
 }
 
-function submitImport() {
-    importForm.post('/transactions/import', {
+function chooseImportFile(event) {
+    importForm.file = event.target.files[0] ?? null;
+    importForm.clearErrors();
+    importPreview.value = null;
+}
+
+function checkImport() {
+    importForm.post('/transactions/import/preview', {
         preserveScroll: true,
+        preserveState: true,
         forceFormData: true,
-        onSuccess: () => {
-            importForm.reset();
-            showImport.value = false;
+        onSuccess: (page) => {
+            importPreview.value = page.props.flash?.import_preview ?? null;
+            previewFilter.value = importPreview.value?.summary?.invalid ? 'errors' : 'all';
+            previewPage.value = 1;
         },
     });
+}
+
+function submitImport() {
+    importForm
+        .transform((data) => ({ ...data, skip_duplicates: data.skip_duplicates ? 1 : 0 }))
+        .post('/transactions/import', {
+            preserveScroll: true,
+            preserveState: true,
+            forceFormData: true,
+            // Tetap buka popup bila server menolak, supaya alasannya terlihat.
+            onSuccess: (page) => {
+                if (!page.props.flash?.error) {
+                    closeImport();
+                }
+            },
+        });
+}
+
+function closeImport() {
+    showImport.value = false;
+    importPreview.value = null;
+    previewFilter.value = 'all';
+    importForm.reset();
+    importForm.clearErrors();
 }
 </script>
 
@@ -377,12 +446,17 @@ function submitImport() {
     </Card>
 
     <!-- Import Excel -->
-    <Modal :open="showImport" title="Import Transaksi dari Excel" @close="showImport = false">
-        <form class="space-y-4" @submit.prevent="submitImport">
-            <ol class="space-y-1.5 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-600">
+    <Modal
+        :open="showImport"
+        title="Import Transaksi dari Excel"
+        :max-width="importPreview ? 'sm:max-w-5xl' : 'sm:max-w-lg'"
+        @close="closeImport"
+    >
+        <div class="space-y-4">
+            <ol v-if="!importPreview" class="space-y-1.5 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-600">
                 <li>1. Unduh <a href="/transactions/template" class="font-semibold text-emerald-700">template baku</a>.</li>
                 <li>2. Isi sheet <span class="font-medium">Transaksi</span> sesuai sheet <span class="font-medium">Panduan</span>.</li>
-                <li>3. Unggah kembali file tersebut di bawah ini.</li>
+                <li>3. Pilih file, lalu periksa datanya sebelum diimpor.</li>
             </ol>
 
             <div>
@@ -390,7 +464,7 @@ function submitImport() {
                     type="file"
                     accept=".xlsx,.xls,.csv"
                     class="w-full rounded-xl text-xs text-slate-500 ring-1 ring-slate-200 file:mr-3 file:rounded-l-xl file:border-0 file:bg-slate-100 file:px-3 file:py-2.5 file:text-xs file:font-semibold file:text-slate-600"
-                    @input="importForm.file = $event.target.files[0]"
+                    @input="chooseImportFile"
                 />
                 <p v-if="importForm.errors.file" class="mt-1 text-xs text-red-600">{{ importForm.errors.file }}</p>
                 <p v-if="importForm.progress" class="mt-1 text-xs text-slate-400">
@@ -398,33 +472,189 @@ function submitImport() {
                 </p>
             </div>
 
-            <div
-                v-if="$page.props.flash?.import_failures?.length"
-                class="max-h-40 overflow-y-auto rounded-xl bg-red-50 px-3 py-2 text-[11px] text-red-700 ring-1 ring-inset ring-red-600/15"
-            >
-                <p class="mb-1 font-semibold">Baris yang dilewati:</p>
-                <p v-for="failure in $page.props.flash.import_failures" :key="failure.row">
-                    Baris {{ failure.row }}: {{ failure.errors.join(', ') }}
-                </p>
-            </div>
+            <template v-if="previewSummary">
+                <!-- Kesalahan tingkat file (kolom hilang, file kosong, dsb.) -->
+                <div
+                    v-if="previewSummary.file_error"
+                    class="rounded-xl bg-red-50 px-4 py-3 text-xs leading-relaxed text-red-700 ring-1 ring-inset ring-red-600/15"
+                >
+                    <p class="mb-1 font-semibold">File tidak bisa diproses</p>
+                    {{ previewSummary.file_error }}
+                </div>
+
+                <template v-else>
+                    <!-- Ringkasan -->
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div class="rounded-xl bg-slate-50 px-3 py-2">
+                            <p class="text-[11px] text-slate-500">Total baris</p>
+                            <p class="text-lg font-bold tabular-nums text-slate-900">{{ previewSummary.total }}</p>
+                        </div>
+                        <div class="rounded-xl bg-emerald-50 px-3 py-2">
+                            <p class="text-[11px] text-emerald-700">Siap diimpor</p>
+                            <p class="text-lg font-bold tabular-nums text-emerald-700">{{ importableCount }}</p>
+                        </div>
+                        <div class="rounded-xl bg-red-50 px-3 py-2">
+                            <p class="text-[11px] text-red-700">Bermasalah</p>
+                            <p class="text-lg font-bold tabular-nums text-red-700">{{ previewSummary.invalid }}</p>
+                        </div>
+                        <div class="rounded-xl bg-amber-50 px-3 py-2">
+                            <p class="text-[11px] text-amber-700">Kemungkinan duplikat</p>
+                            <p class="text-lg font-bold tabular-nums text-amber-700">{{ previewSummary.duplicates }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Keterangan error, di atas tabel -->
+                    <div
+                        v-if="previewSummary.error_groups.length"
+                        class="rounded-xl bg-red-50 px-4 py-3 text-xs text-red-700 ring-1 ring-inset ring-red-600/15"
+                    >
+                        <p class="mb-1.5 font-semibold">Kesalahan yang ditemukan &mdash; baris ini tidak akan diimpor:</p>
+                        <ul class="max-h-40 space-y-1 overflow-y-auto">
+                            <li v-for="group in previewSummary.error_groups" :key="group.message" class="leading-relaxed">
+                                <span class="font-medium">{{ group.message }}</span>
+                                <span class="text-red-600/80">
+                                    &mdash; {{ group.count }} baris (baris {{ group.rows.join(', ') }}{{ group.count > group.rows.length ? ', ...' : '' }})
+                                </span>
+                            </li>
+                        </ul>
+                        <p v-if="previewSummary.accounts_hint.length" class="mt-2 border-t border-red-600/10 pt-2 text-red-600/90">
+                            Nama akun yang dikenali di grup Anda:
+                            <span class="font-medium">{{ previewSummary.accounts_hint.join(' | ') }}</span>
+                        </p>
+                    </div>
+
+                    <label
+                        v-if="previewSummary.duplicates"
+                        class="flex cursor-pointer items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800 ring-1 ring-inset ring-amber-600/20"
+                    >
+                        <input v-model="importForm.skip_duplicates" type="checkbox" class="mt-0.5 size-3.5 accent-amber-600" />
+                        <span>
+                            Lewati <strong>{{ previewSummary.duplicates }}</strong> baris yang tampaknya sudah pernah dicatat
+                            (tanggal, tipe, nominal, akun, dan keterangan sama persis dengan transaksi yang ada).
+                        </span>
+                    </label>
+
+                    <p
+                        v-if="previewSummary.new_categories.length"
+                        class="rounded-xl bg-sky-50 px-4 py-2.5 text-xs text-sky-800 ring-1 ring-inset ring-sky-600/15"
+                    >
+                        Kategori baru yang akan dibuat otomatis:
+                        <span class="font-medium">{{ previewSummary.new_categories.join(', ') }}</span>
+                    </p>
+
+                    <!-- Filter tabel -->
+                    <div class="flex flex-wrap gap-1.5">
+                        <button
+                            v-for="tab in [
+                                { value: 'all', label: `Semua (${previewSummary.total})` },
+                                { value: 'errors', label: `Bermasalah (${previewSummary.invalid})` },
+                                { value: 'duplicates', label: `Duplikat (${previewSummary.duplicates})` },
+                            ]"
+                            :key="tab.value"
+                            type="button"
+                            class="rounded-lg px-3 py-1.5 text-xs font-medium transition"
+                            :class="previewFilter === tab.value ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                            @click="previewFilter = tab.value"
+                        >
+                            {{ tab.label }}
+                        </button>
+                    </div>
+
+                    <!-- Tabel pratinjau -->
+                    <div class="max-h-[45dvh] overflow-auto rounded-xl ring-1 ring-slate-200">
+                        <table class="min-w-full text-left text-xs">
+                            <thead class="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th class="px-3 py-2 font-semibold">Baris</th>
+                                    <th class="px-3 py-2 font-semibold">Tanggal</th>
+                                    <th class="px-3 py-2 font-semibold">Tipe</th>
+                                    <th class="px-3 py-2 font-semibold">Kategori</th>
+                                    <th class="px-3 py-2 font-semibold">Akun</th>
+                                    <th class="px-3 py-2 text-right font-semibold">Nominal</th>
+                                    <th class="px-3 py-2 font-semibold">Keterangan</th>
+                                    <th class="px-3 py-2 font-semibold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr
+                                    v-for="row in pagedPreviewRows"
+                                    :key="row.row"
+                                    :class="row.errors.length ? 'bg-red-50/70' : row.duplicate ? 'bg-amber-50/70' : ''"
+                                >
+                                    <td class="whitespace-nowrap px-3 py-2 tabular-nums text-slate-400">{{ row.row }}</td>
+                                    <td class="whitespace-nowrap px-3 py-2 tabular-nums text-slate-700">{{ row.tanggal || '-' }}</td>
+                                    <td class="whitespace-nowrap px-3 py-2 text-slate-700">{{ row.tipe_label || '-' }}</td>
+                                    <td class="whitespace-nowrap px-3 py-2 text-slate-700">
+                                        {{ row.kategori || '-' }}
+                                        <span v-if="row.new_category" class="ml-1 rounded bg-sky-100 px-1 text-[10px] font-semibold text-sky-700">baru</span>
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-2 text-slate-700">{{ row.akun || '-' }}</td>
+                                    <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-slate-900">
+                                        {{ row.nominal !== null ? formatRupiah(row.nominal) : row.nominal_raw || '-' }}
+                                    </td>
+                                    <td class="max-w-[14rem] truncate px-3 py-2 text-slate-500" :title="row.keterangan">{{ row.keterangan || '-' }}</td>
+                                    <td class="min-w-[12rem] px-3 py-2">
+                                        <ul v-if="row.errors.length" class="space-y-0.5 text-[11px] text-red-700">
+                                            <li v-for="error in row.errors" :key="error">{{ error }}</li>
+                                        </ul>
+                                        <span v-else-if="row.duplicate" class="text-[11px] font-medium text-amber-700">
+                                            {{ importForm.skip_duplicates ? 'Duplikat, dilewati' : 'Duplikat, tetap diimpor' }}
+                                        </span>
+                                        <span v-else class="text-[11px] font-medium text-emerald-700">Siap diimpor</span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!pagedPreviewRows.length">
+                                    <td colspan="8" class="px-3 py-6 text-center text-slate-400">Tidak ada baris pada filter ini.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="previewPageCount > 1" class="flex items-center justify-between text-xs text-slate-500">
+                        <button type="button" class="rounded-lg px-2.5 py-1 hover:bg-slate-100 disabled:opacity-40" :disabled="previewPage === 1" @click="previewPage--">
+                            &larr; Sebelumnya
+                        </button>
+                        <span>Halaman {{ previewPage }} dari {{ previewPageCount }}</span>
+                        <button
+                            type="button"
+                            class="rounded-lg px-2.5 py-1 hover:bg-slate-100 disabled:opacity-40"
+                            :disabled="previewPage === previewPageCount"
+                            @click="previewPage++"
+                        >
+                            Berikutnya &rarr;
+                        </button>
+                    </div>
+                </template>
+            </template>
 
             <div class="flex gap-2">
                 <button
                     type="button"
                     class="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-200"
-                    @click="showImport = false"
+                    @click="closeImport"
                 >
-                    Tutup
+                    Batal
                 </button>
                 <button
-                    type="submit"
+                    v-if="!previewSummary || previewSummary.file_error"
+                    type="button"
                     class="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
                     :disabled="importForm.processing || !importForm.file"
+                    @click="checkImport"
                 >
-                    {{ importForm.processing ? 'Mengimpor...' : 'Import Sekarang' }}
+                    {{ importForm.processing ? 'Memeriksa...' : 'Periksa Data' }}
+                </button>
+                <button
+                    v-else
+                    type="button"
+                    class="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                    :disabled="importForm.processing || importableCount === 0"
+                    @click="submitImport"
+                >
+                    {{ importForm.processing ? 'Mengimpor...' : importableCount ? `Import ${importableCount} Transaksi` : 'Tidak ada baris yang bisa diimpor' }}
                 </button>
             </div>
-        </form>
+        </div>
     </Modal>
 
     <TransferModal :open="showTransfer" :accounts="accounts" @close="showTransfer = false" />

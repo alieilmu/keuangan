@@ -40,7 +40,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
-                'import_failures' => fn () => $request->session()->get('import_failures'),
+                'import_preview' => fn () => $request->session()->get('import_preview'),
                 'generated_password' => fn () => $request->session()->get('generated_password'),
             ],
             // Hanya jumlah belum-dibaca yang dikirim di setiap halaman, untuk

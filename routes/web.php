@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function (): void {
     // Import & export Excel
     Route::get('transactions/template', [TransactionImportController::class, 'template'])->name('transactions.template');
     Route::get('transactions/export', [TransactionImportController::class, 'export'])->name('transactions.export');
+    Route::post('transactions/import/preview', [TransactionImportController::class, 'preview'])->name('transactions.import.preview');
     Route::post('transactions/import', [TransactionImportController::class, 'store'])->name('transactions.import');
 
     // --- Anggaran ----------------------------------------------------------

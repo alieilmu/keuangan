@@ -28,6 +28,11 @@ const NAV = [
     { href: '/categories', label: 'Kategori', icon: 'M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v5H4zM13 14h7v5h-7z' },
 ];
 
+// Menu bawah ponsel hanya muat 5 item; sisanya dipindah ke menu profil.
+const MOBILE_NAV_HREFS = ['/dashboard', '/transactions', '/budgets', '/bills', '/accounts'];
+const MOBILE_NAV = MOBILE_NAV_HREFS.map((href) => NAV.find((item) => item.href === href));
+const MORE_NAV = NAV.filter((item) => !MOBILE_NAV_HREFS.includes(item.href));
+
 function isActive(href) {
     return page.url === href || page.url.startsWith(`${href}?`);
 }
@@ -75,6 +80,21 @@ function logout() {
                         <div class="px-2.5 py-2">
                             <p class="truncate text-xs font-semibold text-slate-800">{{ user?.name }}</p>
                             <p class="truncate text-[11px] text-slate-400">{{ user?.email }}</p>
+                        </div>
+                        <!-- Modul yang tidak muat di menu bawah ponsel -->
+                        <div class="border-b border-slate-100 pb-1.5 mb-1.5 sm:hidden">
+                            <Link
+                                v-for="item in MORE_NAV"
+                                :key="item.href"
+                                :href="item.href"
+                                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition hover:bg-slate-100"
+                                :class="isActive(item.href) ? 'text-emerald-700' : 'text-slate-600'"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4 shrink-0">
+                                    <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                {{ item.label }}
+                            </Link>
                         </div>
                         <button
                             v-if="group"
@@ -157,7 +177,7 @@ function logout() {
         >
             <div class="grid grid-cols-5">
                 <Link
-                    v-for="item in NAV.slice(0, 5)"
+                    v-for="item in MOBILE_NAV"
                     :key="item.href"
                     :href="item.href"
                     class="flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition"

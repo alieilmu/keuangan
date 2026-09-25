@@ -109,7 +109,7 @@ function destroy(account) {
             <article
                 v-for="account in accounts"
                 :key="account.id"
-                class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70"
+                class="min-w-0 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70"
                 :class="account.is_active ? '' : 'opacity-60'"
             >
                 <div class="flex items-start justify-between gap-2">
